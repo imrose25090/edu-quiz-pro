@@ -1,0 +1,177 @@
+import React, { useState } from 'react';
+import { useApp } from "../../store"; 
+
+import AdminTabs from './AdminTabs';
+import ClassManager from './ClassManager';
+import SubjectManager from './SubjectManager'; 
+import ChapterManager from './ChapterManager';
+import QuestionManager from './QuestionManager';
+import FormatSettings from './FormatSettings';
+import TeacherManagement from './TeacherManagement';
+import SystemSettings from './SystemSettings';
+import PassageModal from './PassageModal';
+import MasterRegistry from './MasterRegistry'; 
+
+const AdminPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
+  const store = useApp();
+
+  const [activeTab, setActiveTab] = useState('REGISTRY');
+  const [selectedClassId, setSelectedClassId] = useState('');
+  const [selectedSubjectId, setSelectedSubjectId] = useState('');
+  const [editingChapterPassage, setEditingChapterPassage] = useState<string | null>(null);
+  const [passageInput, setPassageInput] = useState('');
+
+  const tabs = [
+    { id: 'CLASSES', label: 'Classes', icon: '🏫' },
+    { id: 'SUBJECTS', label: 'Subjects', icon: '📚' },
+    { id: 'CHAPTERS', label: 'Chapters', icon: '📖' },
+    { id: 'TEACHERS', label: 'Teachers', icon: '👨‍🏫' },
+    { id: 'QUESTIONS', label: 'Questions', icon: '📝' },
+    { id: 'REGISTRY', label: 'Registry', icon: '👥' }, 
+    { id: 'FORMATS', label: 'Formats', icon: '📋' },
+    { id: 'SYSTEM', label: 'System/Reports', icon: '⚙️' }
+  ];
+
+  return (
+    <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-8 font-['Hind_Siliguri'] pb-20">
+      <div className="max-w-7xl mx-auto space-y-8">
+        
+        {/* Header Section */}
+        <div className="flex flex-col lg:flex-row justify-between items-center bg-white p-6 rounded-[32px] shadow-sm border border-slate-100 gap-6">
+          <div className="flex items-center space-x-6">
+            <button 
+              onClick={onBack} 
+              className="w-12 h-12 bg-slate-50 text-slate-600 rounded-2xl flex items-center justify-center border border-slate-100 hover:bg-indigo-600 hover:text-white transition-all font-black shadow-sm"
+            >
+              ←
+            </button>
+            <div>
+              <h2 className="text-3xl font-black text-slate-900 tracking-tighter italic uppercase leading-none">
+                EduQuiz <span className="text-blue-600 font-black">Pro</span>
+              </h2>
+              <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.3em] mt-2">Management Center</p>
+            </div>
+          </div>
+          
+          <AdminTabs 
+            activeTab={activeTab} 
+            setActiveTab={setActiveTab} 
+            tabs={tabs} 
+          />
+        </div>
+
+        {/* Content Section */}
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          
+          {activeTab === 'CLASSES' && (
+            <ClassManager 
+              classes={store.classes} 
+              bulkAdd={store.bulkAddClasses} 
+              deleteItem={store.deleteClass} 
+            />
+          )}
+          
+          {activeTab === 'SUBJECTS' && (
+            <SubjectManager 
+              classes={store.classes} 
+              subjects={store.subjects} 
+              selectedClassId={selectedClassId} 
+              setSelectedClassId={setSelectedClassId} 
+              // ✅ Fixed the prop name to match store method
+              bulkAdd={store.bulkAddSubjects} 
+              deleteSubject={store.deleteSubject} 
+            />
+          )}
+          
+          {activeTab === 'CHAPTERS' && (
+            <ChapterManager 
+              classes={store.classes} 
+              subjects={store.subjects} 
+              chapters={store.chapters} 
+              selectedClassId={selectedClassId} 
+              selectedSubjectId={selectedSubjectId} 
+              setSelectedClassId={setSelectedClassId} 
+              setSelectedSubjectId={setSelectedSubjectId} 
+              bulkAdd={store.bulkAddChapters} 
+              deleteItem={store.deleteChapter} 
+              setEditingChapterPassage={setEditingChapterPassage} 
+              setPassageInput={setPassageInput} 
+            />
+          )}
+          
+          {activeTab === 'QUESTIONS' && (
+            <QuestionManager 
+              classes={store.classes} 
+              subjects={store.subjects} 
+              chapters={store.chapters} 
+              questions={store.questions} 
+              addBulkQuestions={store.addBulkQuestions} 
+              deleteQuestion={store.deleteQuestion} 
+              deleteAllQuestions={store.deleteAllQuestions} 
+            />
+          )}
+          
+          {activeTab === 'TEACHERS' && (
+            <TeacherManagement 
+              teachers={store.teachers} 
+              bulkAddTeachers={store.bulkAddTeachers} 
+              updateTeacher={store.updateTeacher} 
+              deleteTeacher={store.deleteTeacher} 
+            />
+          )}
+          
+          {(activeTab === 'REGISTRY' || activeTab === 'STUDENT') && (
+            <MasterRegistry 
+              activeTab={activeTab} 
+              setActiveTab={setActiveTab} 
+              classes={store.classes} 
+              subjects={store.subjects} 
+              chapters={store.chapters} 
+              questions={store.questions} 
+              teachers={store.teachers} 
+              students={store.students || []} 
+              quizzes={store.quizzes || []} 
+              selectedClassId={selectedClassId} 
+              selectedSubjectId={selectedSubjectId} 
+              deleteClass={store.deleteClass} 
+              deleteSubject={store.deleteSubject} 
+              deleteChapter={store.deleteChapter} 
+              deleteQuestion={store.deleteQuestion} 
+              deleteTeacher={store.deleteTeacher} 
+              deleteStudent={store.deleteStudent} 
+              updateTeacher={store.updateTeacher} 
+              updateStudent={store.updateStudent} 
+              setEditingChapterPassage={setEditingChapterPassage} 
+              setPassageInput={setPassageInput} 
+              generateRandomPin={() => Math.floor(1000 + Math.random() * 9000).toString()} 
+            />
+          )}
+          
+          {activeTab === 'FORMATS' && <FormatSettings />}
+          
+          {activeTab === 'SYSTEM' && (
+            <SystemSettings 
+              onReset={store.deleteAllQuestions} 
+              quizzes={store.quizzes || []} 
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Passage Edit Modal */}
+      {editingChapterPassage && (
+        <PassageModal 
+          passageInput={passageInput} 
+          setPassageInput={setPassageInput} 
+          onSave={() => { 
+            store.updateChapter(editingChapterPassage, { passageContent: passageInput }); 
+            setEditingChapterPassage(null); 
+          }} 
+          onCancel={() => setEditingChapterPassage(null)} 
+        />
+      )}
+    </div>
+  );
+};
+
+export default AdminPanel;

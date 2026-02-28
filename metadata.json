@@ -1,0 +1,8 @@
+{
+  "name": "EduQuiz Pro - Smart Quiz Management System",
+  "description": "A comprehensive education management and quiz platform featuring Admin controls, Teacher panels for automated quiz generation, and Student portals with real-time leaderboards.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
