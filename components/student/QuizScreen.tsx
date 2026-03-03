@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 
 interface QuizScreenProps {
   activeQuiz: any;
   timeLeft: number;
+  setTimeLeft: React.Dispatch<React.SetStateAction<number>>; // এটি মিসিং ছিল
   answers: Record<string, string>;
   setAnswers: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   onSubmit: () => void;
@@ -11,11 +12,27 @@ interface QuizScreenProps {
 export const QuizScreen: React.FC<QuizScreenProps> = ({ 
   activeQuiz, 
   timeLeft, 
+  setTimeLeft, // এটি প্রপস হিসেবে রিসিভ করছি
   answers, 
   setAnswers, 
   onSubmit 
 }) => {
-  
+
+  // ✅ অটোমেটিক টাইমার লজিক
+  useEffect(() => {
+    if (timeLeft <= 0) {
+      alert("সময় শেষ! কুইজটি অটোমেটিক সাবমিট হচ্ছে।");
+      onSubmit();
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setTimeLeft(prev => prev - 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [timeLeft, onSubmit, setTimeLeft]);
+
   const handleOptionSelect = (qId: string, optionValue: string) => {
     setAnswers(prev => ({
       ...prev,
@@ -30,25 +47,27 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({
     }));
   };
 
-  // ✅ ইনপুট টাইপ ডিটেকশন লজিক (নিশ্চিত করা হয়েছে যেন সঠিক উত্তর অপশন হিসেবে না দেখায়)
+  // ✅ ইনপুট টাইপ ডিটেকশন লজিক
   const isInputType = (q: any) => {
+    if (!q) return false;
     const type = q.type?.toUpperCase() || '';
-    
-    // ১. যদি টাইপ নির্দিষ্ট করা থাকে
     if (type === 'FILL_IN_THE_GAP' || type === 'SHORT_ANSWER' || q.requiresInput) return true;
-    
-    // ২. যদি অপশন না থাকে অথবা অপশন লিস্ট খালি থাকে
     if (!q.options || !Array.isArray(q.options) || q.options.length === 0) return true;
-    
-    // ৩. যদি অপশন থাকে কিন্তু সেগুলো সব খালি স্ট্রিং হয়
     const hasValidOptions = q.options.some((opt: any) => opt && String(opt).trim() !== "");
     if (!hasValidOptions) return true;
-
-    // ৪. যদি অপশনে ভুলবশত শুধু সঠিক উত্তরটিই ঢোকানো থাকে (সাধারণত ১টি অপশন মানেই সেটি শর্ট আনসার হওয়ার কথা)
     if (q.options.length === 1) return true;
-
     return false;
   };
+
+  // যদি কোনো কারণে activeQuiz না থাকে তবে লোডিং দেখাবে (সাদা স্ক্রিন হবে না)
+  if (!activeQuiz || !activeQuiz.questions) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        <p className="mt-4 font-bold text-slate-500">কুইজ লোড হচ্ছে...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto px-4 md:px-0 space-y-8 font-['Hind_Siliguri'] pb-20 animate-in fade-in duration-500">
@@ -90,16 +109,14 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({
           
           return (
             <div 
-              key={q.id} 
+              key={q.id || idx} 
               className="bg-white p-6 md:p-10 rounded-[40px] md:rounded-[50px] shadow-sm border border-slate-100 hover:shadow-md transition-all duration-300 relative overflow-hidden group"
             >
-              {/* Vertical Side Indicator */}
               <div className={`absolute top-0 left-0 w-2.5 h-full transition-colors ${
                 answers[q.id] ? 'bg-emerald-500' : 'bg-slate-100 group-hover:bg-indigo-500'
               }`} />
               
               <div className="flex flex-col md:flex-row gap-6 md:gap-10">
-                {/* Question Number Badge */}
                 <div className="flex flex-row md:flex-col items-center justify-between md:justify-start">
                     <span className={`w-12 h-12 md:w-16 md:h-16 rounded-2xl md:rounded-[24px] flex items-center justify-center font-black shrink-0 text-xl md:text-2xl transition-all ${
                     answers[q.id] 
@@ -114,14 +131,11 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({
                 </div>
                 
                 <div className="space-y-8 w-full">
-                  {/* Question Text */}
                   <p className="text-2xl md:text-3xl font-bold text-slate-800 leading-[1.4]">
                     {q.questionText || q.text}
                   </p>
 
-                  {/* ✅ Logic: Input vs MCQ Rendering */}
                   {isTextInput ? (
-                    /* --- Input Box Design --- */
                     <div className="relative animate-in zoom-in-95 duration-300">
                       <input 
                         type="text"
@@ -130,16 +144,10 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({
                         value={answers[q.id] || ''}
                         onChange={(e) => handleTextInput(q.id, e.target.value)}
                       />
-                      <div className="absolute right-8 top-1/2 -translate-y-1/2 text-slate-200 pointer-events-none">
-                        <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </div>
                     </div>
                   ) : (
-                    /* --- MCQ Options Design --- */
                     <div className="grid grid-cols-1 gap-4 animate-in slide-in-from-left-2 duration-300">
-                      {q.options.map((opt: string, i: number) => (
+                      {(q.options || []).map((opt: string, i: number) => (
                         <button 
                           key={i} 
                           onClick={() => handleOptionSelect(q.id, opt)} 
