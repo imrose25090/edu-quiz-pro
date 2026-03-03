@@ -17,7 +17,7 @@ interface StudentLoginProps {
 
 export const StudentLogin: React.FC<StudentLoginProps> = ({ 
   quizCode, setQuizCode, studentName, setStudentName, onStart, onBack,
-  onRegister, onStudentLogin 
+  students, onRegister, onStudentLogin 
 }) => {
   const [isNewUser, setIsNewUser] = useState(false);
   const [password, setPassword] = useState('');
@@ -31,19 +31,48 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({
   const [viewingQuiz, setViewingQuiz] = useState<any | null>(null);
   const [viewingAttempt, setViewingAttempt] = useState<any | null>(null);
 
-  // ১. লগইন/রেজিস্ট্রেশন অ্যাকশন
+  // ১. লগইন/রেজিস্ট্রেশন অ্যাকশন (Device Lock & Duplicate Check সহ)
   const handleAction = (e: React.FormEvent) => {
     e.preventDefault();
+    const cleanName = studentName.trim();
+    const cleanPass = password.trim();
+
     if (isNewUser) {
-      if (studentName.trim() && password.trim()) {
-        onRegister(studentName, password);
+      // ✅ ডিভাইস চেক: এই ব্রাউজার থেকে আগে আইডি খোলা হয়েছে কিনা
+      const hasAccountOnThisDevice = localStorage.getItem('eduquiz_student_registered');
+      
+      if (hasAccountOnThisDevice) {
+        alert("দুঃখিত! এই ডিভাইস থেকে অলরেডি একটি অ্যাকাউন্ট তৈরি করা হয়েছে। আপনি কেবল লগইন করতে পারবেন।");
+        setIsNewUser(false);
+        return;
+      }
+
+      if (cleanName && cleanPass) {
+        // ✅ ডুপ্লিকেট নাম চেক (একই নামে অন্য কেউ আছে কি না)
+        const isDuplicate = students.some(
+          (s) => s.name.toLowerCase() === cleanName.toLowerCase()
+        );
+
+        if (isDuplicate) {
+          alert("এই নামে অলরেডি একটি অ্যাকাউন্ট আছে! দয়া করে লগইন করুন অথবা অন্য নাম ব্যবহার করুন।");
+          setIsNewUser(false);
+          return;
+        }
+
+        // রেজিস্ট্রেশন সফল হলে ডিভাইসে লক বসানো
+        onRegister(cleanName, cleanPass);
+        localStorage.setItem('eduquiz_student_registered', 'true'); // ডিভাইস লক সেট
+        localStorage.setItem('registered_student_name', cleanName); // রেফারেন্সের জন্য নাম সেভ
+        
+        alert("অ্যাকাউন্ট তৈরি সফল হয়েছে! এখন লগইন করুন।");
         setIsNewUser(false);
         setPassword('');
       } else {
-        alert("সব তথ্য সঠিকভাবে পূরণ করুন!");
+        alert("দয়া করে নাম এবং পাসওয়ার্ড সঠিকভাবে দিন।");
       }
     } else {
-      const success = onStudentLogin(studentName, password);
+      // লগইন লজিক
+      const success = onStudentLogin(cleanName, cleanPass);
       if (success) {
         setIsLoggedIn(true);
       } else {
@@ -71,7 +100,7 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({
             
             studentPointsMap[att.studentName] = (studentPointsMap[att.studentName] || 0) + points;
 
-            if (att.studentName === studentName) {
+            if (att.studentName.toLowerCase() === studentName.toLowerCase()) {
               myHistory.push({
                 fullQuizData: quiz,
                 myAttemptData: att,
@@ -86,7 +115,7 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({
         });
 
         const sorted = Object.entries(studentPointsMap).sort(([, a], [, b]) => b - a);
-        const myRank = sorted.findIndex(([name]) => name === studentName) + 1;
+        const myRank = sorted.findIndex(([name]) => name.toLowerCase() === studentName.toLowerCase()) + 1;
         
         setTotalPoints(studentPointsMap[studentName] || 0);
         setGlobalRank(myRank > 0 ? myRank : 0);
@@ -125,7 +154,6 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({
                 <h2 className="text-3xl font-black text-slate-800 italic uppercase leading-none">{isNewUser ? 'New Account' : 'Student Login'}</h2>
                 <p className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em] mt-2">Edu-Track Portal</p>
              </div>
-             {/* লগইন করার সময় শুধুমাত্র ইনপুট দেখাবে */}
              <input 
                 type="text" 
                 placeholder="Your Full Name" 
@@ -151,13 +179,11 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({
           </form>
         ) : (
           <div className="space-y-6">
-            {/* লগইন হয়ে গেলে এখানে আর ইনপুট ফিল্ড নেই, শুধু বড় করে নাম দেখাবে */}
             <div className="py-2">
                 <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Signed In As</p>
                 <h2 className="text-3xl font-black text-indigo-600 uppercase tracking-tight">{studentName}</h2>
             </div>
 
-            {/* Stats - Non-Editable */}
             <div className="grid grid-cols-3 gap-3">
                 <div className="p-4 bg-indigo-600 rounded-3xl text-white shadow-lg">
                     <p className="text-[8px] font-black uppercase opacity-70">Points</p>
@@ -173,7 +199,6 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({
                 </div>
             </div>
 
-            {/* Quiz Entry Section */}
             <div className="p-6 bg-slate-50 rounded-[30px] border-2 border-dashed border-slate-200 text-left space-y-4">
                 <p className="text-slate-500 font-black text-[10px] uppercase tracking-[0.2em] px-1">Ready to Quiz?</p>
                 <div className="flex gap-2">
@@ -188,7 +213,6 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({
                 </div>
             </div>
 
-            {/* History Section */}
             <button onClick={() => setShowHistory(!showHistory)} className="w-full py-2 text-slate-400 font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-2">
                 {showHistory ? 'Hide Results' : 'Download Scripts & History'}
                 <svg className={`w-3 h-3 transition-transform ${showHistory ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" /></svg>
@@ -217,7 +241,6 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({
           </div>
         )}
 
-        {/* Modal: View & Download Only */}
         {viewingQuiz && viewingAttempt && (
           <StudentTranscriptModal 
             quiz={viewingQuiz} 
