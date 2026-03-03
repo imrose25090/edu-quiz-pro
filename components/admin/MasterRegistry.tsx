@@ -26,14 +26,26 @@ interface MasterRegistryProps {
 
 const MasterRegistry: React.FC<MasterRegistryProps> = ({
   activeTab = 'REGISTRY',
-  classes, subjects, chapters, questions, teachers, students = [],
-  selectedClassId, selectedSubjectId, deleteClass, deleteSubject,
-  deleteChapter, deleteQuestion, deleteTeacher, deleteStudent, updateTeacher,
+  classes = [],      // ডিফল্ট ভ্যালু দিন যাতে .length এরর না আসে
+  subjects = [], 
+  chapters = [], 
+  questions = [], 
+  teachers = [], 
+  students = [],
+  selectedClassId, 
+  selectedSubjectId, 
+  deleteClass, 
+  deleteSubject,
+  deleteChapter, 
+  deleteQuestion, 
+  deleteTeacher, 
+  deleteStudent, 
+  updateTeacher,
   updateStudent
 }) => {
 
+  // ১. ফিল্টার লজিক সংশোধন
   const getFilteredData = () => {
-    if (!activeTab) return [];
     switch (activeTab) {
       case 'CLASSES': return classes;
       case 'SUBJECTS': return subjects.filter(s => !selectedClassId || s.classId === selectedClassId);
@@ -51,7 +63,7 @@ const MasterRegistry: React.FC<MasterRegistryProps> = ({
   return (
     <div className="lg:col-span-7 bg-white rounded-[40px] border border-slate-200 shadow-sm overflow-hidden flex flex-col h-[850px] font-['Hind_Siliguri']">
       
-      {/* ১. রিপোর্ট সামারি সেকশন (Analytics) */}
+      {/* ১. রিপোর্ট সামারি সেকশন */}
       <div className="p-8 bg-gradient-to-br from-slate-900 to-slate-800 text-white">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4">
           <div>
@@ -61,11 +73,11 @@ const MasterRegistry: React.FC<MasterRegistryProps> = ({
           <div className="flex gap-2">
              <div className="bg-white/10 p-3 rounded-2xl border border-white/10 text-center min-w-[100px] backdrop-blur-sm">
                 <div className="text-[9px] font-black text-slate-400 uppercase">Growth</div>
-                <div className="text-xl font-black text-emerald-400">+{Math.floor(students.length / 4)}</div>
+                <div className="text-xl font-black text-emerald-400">+{Math.floor((students?.length || 0) / 4)}</div>
              </div>
              <div className="bg-white/10 p-3 rounded-2xl border border-white/10 text-center min-w-[100px] backdrop-blur-sm">
                 <div className="text-[9px] font-black text-slate-400 uppercase">New Users</div>
-                <div className="text-xl font-black text-indigo-400">+{students.length}</div>
+                <div className="text-xl font-black text-indigo-400">+{students?.length || 0}</div>
              </div>
           </div>
         </div>
@@ -73,15 +85,15 @@ const MasterRegistry: React.FC<MasterRegistryProps> = ({
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
            <div className="bg-indigo-600 p-4 rounded-[24px] shadow-lg shadow-indigo-900/20 group hover:scale-105 transition-transform">
               <div className="text-[9px] font-black uppercase text-indigo-200">Total Students</div>
-              <div className="text-2xl font-black">{students.length}</div>
+              <div className="text-2xl font-black">{students?.length || 0}</div>
            </div>
            <div className="bg-slate-700/50 p-4 rounded-[24px] border border-slate-600 group hover:scale-105 transition-transform">
               <div className="text-[9px] font-black uppercase text-slate-400">Teachers</div>
-              <div className="text-2xl font-black">{teachers.length}</div>
+              <div className="text-2xl font-black">{teachers?.length || 0}</div>
            </div>
            <div className="bg-slate-700/50 p-4 rounded-[24px] border border-slate-600 group hover:scale-105 transition-transform">
               <div className="text-[9px] font-black uppercase text-slate-400">Questions</div>
-              <div className="text-2xl font-black">{questions.length}</div>
+              <div className="text-2xl font-black">{questions?.length || 0}</div>
            </div>
            <div className="bg-slate-700/50 p-4 rounded-[24px] border border-slate-600 group hover:scale-105 transition-transform">
               <div className="text-[9px] font-black uppercase text-slate-400">Active Quizzes</div>
@@ -90,7 +102,7 @@ const MasterRegistry: React.FC<MasterRegistryProps> = ({
         </div>
       </div>
 
-      {/* ২. হেডার ফিল্টার টাইটেল */}
+      {/* ২. হেডার */}
       <div className="px-10 py-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
         <h4 className="font-black text-slate-800 uppercase text-xs md:text-sm tracking-widest flex items-center gap-2">
             <span className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></span>
@@ -101,7 +113,7 @@ const MasterRegistry: React.FC<MasterRegistryProps> = ({
         </div>
       </div>
 
-      {/* ৩. লিস্ট এরিয়া */}
+      {/* ৩. লিস্ট এরিয়া (সংশোধিত ম্যাপ লজিক) */}
       <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-4 bg-slate-50/30 scroll-smooth custom-scrollbar">
         
         {/* TEACHERS LIST */}
@@ -118,9 +130,8 @@ const MasterRegistry: React.FC<MasterRegistryProps> = ({
                    {tchr.isFrozen && <span className="text-[8px] bg-rose-600 text-white px-2 py-0.5 rounded-full">FROZEN</span>}
                  </div>
                  <div className="text-[10px] font-bold text-slate-400 lowercase">{tchr.email}</div>
-                 
                  <div className="mt-2 flex items-center gap-2">
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Access Until:</span>
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Access:</span>
                     <span className="text-[9px] font-black text-rose-500 bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-100 italic">
                        {tchr.expiryDate || '31 DEC 2026'} 
                     </span>
@@ -133,11 +144,11 @@ const MasterRegistry: React.FC<MasterRegistryProps> = ({
                 onClick={() => updateTeacher(tchr.id, { isFrozen: !tchr.isFrozen })} 
                 className={`flex-1 md:flex-none px-5 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${tchr.isFrozen ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-800 hover:text-white'}`}
               >
-                {tchr.isFrozen ? 'Reactive' : 'Freeze'}
+                {tchr.isFrozen ? 'Unfreeze' : 'Freeze'}
               </button>
               <button 
                 onClick={() => { if(window.confirm(`Delete ${tchr.name}?`)) deleteTeacher(tchr.id) }} 
-                className="opacity-0 group-hover:opacity-100 flex-1 md:flex-none text-rose-500 font-black text-[10px] bg-rose-50 px-5 py-2.5 rounded-xl hover:bg-rose-500 hover:text-white transition-all"
+                className="group-hover:opacity-100 flex-1 md:flex-none text-rose-500 font-black text-[10px] bg-rose-50 px-5 py-2.5 rounded-xl hover:bg-rose-500 hover:text-white transition-all"
               >
                 DELETE
               </button>
@@ -157,7 +168,7 @@ const MasterRegistry: React.FC<MasterRegistryProps> = ({
                    {user.name}
                    {user.isFrozen && <span className="text-[8px] bg-rose-500 text-white px-2 py-0.5 rounded-full">BLOCKED</span>}
                  </div>
-                 <div className="text-[10px] font-black text-slate-400 tracking-widest uppercase">ID: {user.phone || user.id.slice(0,8)}</div>
+                 <div className="text-[10px] font-black text-slate-400 tracking-widest uppercase">ID: {user.phone || user.id?.slice(0,8)}</div>
                  <div className="text-[9px] font-bold text-emerald-500 uppercase mt-1">Student Account</div>
                </div>
             </div>
@@ -171,11 +182,29 @@ const MasterRegistry: React.FC<MasterRegistryProps> = ({
               </button>
               <button 
                 onClick={() => { if(window.confirm('Delete Student?')) deleteStudent?.(user.id) }} 
-                className="opacity-0 group-hover:opacity-100 flex-1 md:flex-none bg-rose-50 text-rose-500 px-5 py-2.5 rounded-xl font-black text-[10px] transition-all hover:bg-rose-500 hover:text-white"
+                className="group-hover:opacity-100 flex-1 md:flex-none bg-rose-50 text-rose-500 px-5 py-2.5 rounded-xl font-black text-[10px] transition-all hover:bg-rose-500 hover:text-white"
               >
                 DELETE
               </button>
             </div>
+          </div>
+        ))}
+
+        {/* CLASSES/SUBJECTS/QUESTIONS List (নতুনভাবে যোগ করা হয়েছে) */}
+        {['CLASSES', 'SUBJECTS', 'CHAPTERS', 'QUESTIONS'].includes(activeTab) && currentData.map((item: any) => (
+          <div key={item.id} className="p-5 rounded-3xl border border-slate-100 bg-white flex justify-between items-center group">
+            <span className="font-bold text-slate-700">{item.name || item.text || item.title}</span>
+            <button 
+              onClick={() => {
+                if(activeTab === 'CLASSES') deleteClass(item.id);
+                if(activeTab === 'SUBJECTS') deleteSubject(item.id);
+                if(activeTab === 'CHAPTERS') deleteChapter(item.id);
+                if(activeTab === 'QUESTIONS') deleteQuestion(item.id);
+              }}
+              className="text-rose-500 bg-rose-50 px-4 py-2 rounded-xl text-[10px] font-black hover:bg-rose-500 hover:text-white opacity-0 group-hover:opacity-100 transition-all"
+            >
+              REMOVE
+            </button>
           </div>
         ))}
 
@@ -184,17 +213,12 @@ const MasterRegistry: React.FC<MasterRegistryProps> = ({
           <div className="flex flex-col items-center justify-center py-32 opacity-30">
             <div className="text-7xl mb-6 grayscale">📊</div>
             <p className="font-black uppercase tracking-[0.4em] text-[10px] text-slate-900">No Data Found in Registry</p>
-            <p className="text-xs text-slate-400 mt-2 font-medium">Select a different tab or add new members.</p>
           </div>
         )}
-
       </div>
       
-      {/* Footer Info */}
-      <div className="p-4 bg-slate-50 border-t border-slate-100 text-center">
-        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+      <div className="p-4 bg-slate-50 border-t border-slate-100 text-center text-[9px] font-black text-slate-400 uppercase tracking-widest">
           Secure Registry Management • 2026 EduQuiz Pro Systems
-        </p>
       </div>
     </div>
   );
