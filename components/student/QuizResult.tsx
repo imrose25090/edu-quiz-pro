@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import confetti from 'canvas-confetti';
 
 interface QuizResultProps {
@@ -8,7 +8,9 @@ interface QuizResultProps {
   pointsEarned: number;
   studentName: string;
   leaderboard: any[];
-  onBack: () => void; // এটি সরাসরি স্টুডেন্ট ড্যাশবোর্ডে নিয়ে যাবে
+  userAnswers: any[]; // স্টুডেন্টের দেওয়া উত্তর
+  questions: any[];    // কুইজের প্রশ্নগুলো
+  onBack: () => void;
 }
 
 export const QuizResult: React.FC<QuizResultProps> = ({ 
@@ -18,11 +20,13 @@ export const QuizResult: React.FC<QuizResultProps> = ({
   pointsEarned = 0,
   studentName = "Student", 
   leaderboard = [], 
+  userAnswers = [],
+  questions = [],
   onBack 
 }) => {
-  
+  const [showReview, setShowReview] = useState(false);
+
   useEffect(() => {
-    // কনফেটি সেলিব্রেশন (পরীক্ষা শেষ হওয়ার আনন্দ)
     const duration = 3 * 1000;
     const animationEnd = Date.now() + duration;
     const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 1000 };
@@ -32,7 +36,6 @@ export const QuizResult: React.FC<QuizResultProps> = ({
     const interval: any = setInterval(function() {
       const timeLeft = animationEnd - Date.now();
       if (timeLeft <= 0) return clearInterval(interval);
-
       const particleCount = 50 * (timeLeft / duration);
       confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
       confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
@@ -57,12 +60,12 @@ export const QuizResult: React.FC<QuizResultProps> = ({
             Great Job, {studentName}!
           </h2>
           <p className="text-indigo-100 font-bold text-xl uppercase tracking-widest">
-            পরীক্ষা সফলভাবে সম্পন্ন হয়েছে
+            পরীক্ষা সফলভাবে সম্পন্ন হয়েছে
           </p>
         </div>
 
+        {/* Stats Cards */}
         <div className="p-10 grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Score Card */}
           <div className="bg-slate-50 p-8 rounded-[40px] text-center space-y-4 border border-slate-100">
             <p className="text-slate-400 font-black text-xs uppercase tracking-widest">মোট স্কোর</p>
             <div className="relative inline-block">
@@ -81,9 +84,8 @@ export const QuizResult: React.FC<QuizResultProps> = ({
             <p className="text-2xl font-black text-indigo-600">{percentage}% নম্বর</p>
           </div>
 
-          {/* Time Card */}
           <div className="bg-slate-50 p-8 rounded-[40px] text-center space-y-4 border border-slate-100">
-            <p className="text-slate-400 font-black text-xs uppercase tracking-widest">ব্যয়িত সময়</p>
+            <p className="text-slate-400 font-black text-xs uppercase tracking-widest">ব্যয়িত সময়</p>
             <div className="text-5xl mb-2">⏳</div>
             <p className="text-3xl font-black text-slate-800">
               {Math.floor(safeTimeSpent / 60)}m {safeTimeSpent % 60}s
@@ -91,65 +93,111 @@ export const QuizResult: React.FC<QuizResultProps> = ({
             <p className="text-slate-400 font-bold uppercase text-[10px]">টাইম ম্যানেজমেন্ট চমৎকার!</p>
           </div>
 
-          {/* Points/Badge Card */}
           <div className="bg-slate-50 p-8 rounded-[40px] text-center space-y-4 border border-slate-100">
             <p className="text-slate-400 font-black text-xs uppercase tracking-widest">অর্জন</p>
             <div className="text-6xl mb-2">
               {percentage >= 80 ? '⭐' : percentage >= 50 ? '🥈' : '💪'}
             </div>
             <p className="text-2xl font-black text-slate-800">
-              {percentage >= 80 ? 'অসাধারণ (Genius)' : percentage >= 50 ? 'ভালো হয়েছে' : 'আরও চেষ্টা করো'}
+              {percentage >= 80 ? 'অসাধারণ (Genius)' : percentage >= 50 ? 'ভালো হয়েছে' : 'আরও চেষ্টা করো'}
             </p>
             <p className="text-indigo-600 font-black text-sm uppercase">Points: {pointsEarned}</p>
           </div>
         </div>
 
-        {/* Leaderboard Section - শুধুমাত্র দেখার জন্য */}
-        <div className="p-10 bg-slate-50/50 border-t border-slate-100">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-xl font-black text-slate-800 italic uppercase">লিডারবোর্ড র‍্যাঙ্কিং</h3>
-            <span className="bg-indigo-100 text-indigo-600 px-4 py-1 rounded-full font-black text-xs uppercase">Top 5 Students</span>
-          </div>
-          
-          <div className="space-y-3">
-            {Array.isArray(leaderboard) && leaderboard.length > 0 ? (
-              [...leaderboard]
-                .sort((a, b) => b.score - a.score || a.timeSpent - b.timeSpent)
-                .slice(0, 5)
-                .map((entry, idx) => (
-                  <div 
-                    key={idx} 
-                    className={`flex justify-between items-center p-4 rounded-2xl border transition-all ${
-                      entry.studentName === studentName 
-                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg scale-[1.02]' 
-                        : 'bg-white border-slate-100 text-slate-600'
-                    }`}
-                  >
-                    <div className="flex items-center gap-4">
-                      <span className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs ${
-                        entry.studentName === studentName ? 'bg-white/20' : 'bg-slate-100'
-                      }`}>
-                        #{idx + 1}
-                      </span>
-                      <span className="font-bold text-lg">{entry.studentName}</span>
+        {/* Action Buttons */}
+        <div className="px-10 pb-10 flex gap-4">
+          <button 
+            onClick={() => setShowReview(!showReview)}
+            className="flex-1 py-4 bg-slate-100 text-slate-700 rounded-2xl font-black uppercase hover:bg-slate-200 transition-all"
+          >
+            {showReview ? 'রিভিউ বন্ধ করো' : 'উত্তরগুলো রিভিউ করো 📝'}
+          </button>
+        </div>
+
+        {/* Answer Review Section */}
+        {showReview && (
+          <div className="p-10 bg-white border-t border-slate-100 space-y-6 animate-in slide-in-from-top-4">
+            <h3 className="text-2xl font-black text-slate-800 uppercase italic">Answer Review</h3>
+            {questions.map((q, idx) => {
+              const studentAns = userAnswers.find(a => a.questionId === q.id)?.selectedOption;
+              const isCorrect = studentAns === q.answer;
+
+              return (
+                <div key={idx} className={`p-6 rounded-3xl border-2 ${isCorrect ? 'border-emerald-100 bg-emerald-50/30' : 'border-rose-100 bg-rose-50/30'}`}>
+                  <div className="flex justify-between items-start mb-3">
+                    <span className="font-black text-slate-400">Q{idx + 1}</span>
+                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${isCorrect ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}`}>
+                      {isCorrect ? 'Correct' : 'Incorrect'}
+                    </span>
+                  </div>
+                  <p className="text-lg font-bold text-slate-800 mb-4">{q.text}</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="p-3 bg-white rounded-xl border border-slate-100">
+                      <p className="text-[10px] font-black text-slate-400 uppercase">Your Answer</p>
+                      <p className={`font-bold ${isCorrect ? 'text-emerald-600' : 'text-rose-600'}`}>{studentAns || 'No Answer'}</p>
                     </div>
-                    <div className="flex items-center gap-6">
-                       <span className="font-mono text-sm opacity-60">
-                         {Math.floor((Number(entry.timeSpent) || 0) / 60)}m {(Number(entry.timeSpent) || 0) % 60}s
-                       </span>
-                       <span className="font-black text-xl">{entry.score}</span>
+                    <div className="p-3 bg-white rounded-xl border border-slate-100">
+                      <p className="text-[10px] font-black text-slate-400 uppercase">Correct Answer</p>
+                      <p className="font-bold text-emerald-600">{q.answer}</p>
                     </div>
                   </div>
-                ))
-            ) : (
-              <p className="text-center text-slate-400 py-4 italic">লিডারবোর্ড এখনো তৈরি হয়নি।</p>
-            )}
+                  {q.explanation && (
+                    <div className="mt-4 p-3 bg-indigo-50 rounded-xl text-sm text-indigo-700 italic">
+                      <strong>ব্যাখ্যা:</strong> {q.explanation}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
-        </div>
+        )}
+
+        {/* Leaderboard Section */}
+        {!showReview && (
+          <div className="p-10 bg-slate-50/50 border-t border-slate-100">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-black text-slate-800 italic uppercase">লিডারবোর্ড র‍্যাঙ্কিং</h3>
+              <span className="bg-indigo-100 text-indigo-600 px-4 py-1 rounded-full font-black text-xs uppercase">Top 5 Students</span>
+            </div>
+            <div className="space-y-3">
+              {leaderboard.length > 0 ? (
+                [...leaderboard]
+                  .sort((a, b) => b.score - a.score || a.timeSpent - b.timeSpent)
+                  .slice(0, 5)
+                  .map((entry, idx) => (
+                    <div 
+                      key={idx} 
+                      className={`flex justify-between items-center p-4 rounded-2xl border transition-all ${
+                        entry.studentName === studentName 
+                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg scale-[1.02]' 
+                          : 'bg-white border-slate-100 text-slate-600'
+                      }`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <span className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs ${
+                          entry.studentName === studentName ? 'bg-white/20' : 'bg-slate-100'
+                        }`}>#{idx + 1}</span>
+                        <span className="font-bold text-lg">{entry.studentName}</span>
+                      </div>
+                      <div className="flex items-center gap-6">
+                         <span className="font-mono text-sm opacity-60">
+                           {Math.floor(entry.timeSpent / 60)}m {entry.timeSpent % 60}s
+                         </span>
+                         <span className="font-black text-xl">{entry.score}</span>
+                      </div>
+                    </div>
+                  ))
+              ) : (
+                <p className="text-center text-slate-400 py-4 italic">লিডারবোর্ড এখনো তৈরি হয়নি।</p>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
+      {/* Navigation Button */}
       <div className="flex flex-col gap-4">
-        {/* Student Dashboard-এ ফেরার বাটন */}
         <button 
           onClick={onBack} 
           className="w-full py-6 bg-indigo-600 text-white rounded-[32px] font-black text-2xl shadow-2xl hover:bg-indigo-700 transition-all flex items-center justify-center gap-4 group"
@@ -157,11 +205,7 @@ export const QuizResult: React.FC<QuizResultProps> = ({
           <span>ড্যাশবোর্ডে ফিরে যাও</span>
           <span className="group-hover:translate-x-2 transition-transform">➡️</span>
         </button>
-
-        <p className="text-center text-slate-400 text-xs font-bold uppercase tracking-widest">
-          আপনার রেজাল্টটি টিচার প্যানেল থেকে সংগ্রহ করুন।
-        </p>
       </div>
     </div>
-  );         
+  );  
 };
