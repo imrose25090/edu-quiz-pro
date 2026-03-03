@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useApp } from "../../store"; 
 
+// সাব-কম্পোনেন্ট ইমপোর্ট (ডিফল্ট ইমপোর্ট হিসেবে)
 import AdminTabs from './AdminTabs';
-import ClassManager from './ClassManager';
+import { ClassManager } from './ClassManager'; // যদি এটি Named Export হয় তবে {} থাকবে
 import SubjectManager from './SubjectManager'; 
 import ChapterManager from './ChapterManager';
 import QuestionManager from './QuestionManager';
@@ -15,7 +16,7 @@ import MasterRegistry from './MasterRegistry';
 const AdminPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const store = useApp();
 
-  const [activeTab, setActiveTab] = useState('REGISTRY');
+  const [activeTab, setActiveTab] = useState('CLASSES');
   const [selectedClassId, setSelectedClassId] = useState('');
   const [selectedSubjectId, setSelectedSubjectId] = useState('');
   const [editingChapterPassage, setEditingChapterPassage] = useState<string | null>(null);
@@ -68,6 +69,7 @@ const AdminPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
               classes={store.classes} 
               bulkAdd={store.bulkAddClasses} 
               deleteItem={store.deleteClass} 
+              bulkDelete={store.bulkDelete} 
             />
           )}
           
@@ -77,9 +79,9 @@ const AdminPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
               subjects={store.subjects} 
               selectedClassId={selectedClassId} 
               setSelectedClassId={setSelectedClassId} 
-              // ✅ Fixed the prop name to match store method
-              bulkAdd={store.bulkAddSubjects} 
+              addSubject={store.bulkAddSubjects} 
               deleteSubject={store.deleteSubject} 
+              bulkDelete={store.bulkDelete} 
             />
           )}
           
@@ -94,6 +96,7 @@ const AdminPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
               setSelectedSubjectId={setSelectedSubjectId} 
               bulkAdd={store.bulkAddChapters} 
               deleteItem={store.deleteChapter} 
+              bulkDelete={store.bulkDelete} 
               setEditingChapterPassage={setEditingChapterPassage} 
               setPassageInput={setPassageInput} 
             />
@@ -107,6 +110,7 @@ const AdminPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
               questions={store.questions} 
               addBulkQuestions={store.addBulkQuestions} 
               deleteQuestion={store.deleteQuestion} 
+              bulkDelete={store.bulkDelete} 
               deleteAllQuestions={store.deleteAllQuestions} 
             />
           )}
@@ -117,6 +121,7 @@ const AdminPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
               bulkAddTeachers={store.bulkAddTeachers} 
               updateTeacher={store.updateTeacher} 
               deleteTeacher={store.deleteTeacher} 
+              bulkDelete={store.bulkDelete} 
             />
           )}
           
@@ -141,6 +146,7 @@ const AdminPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
               deleteStudent={store.deleteStudent} 
               updateTeacher={store.updateTeacher} 
               updateStudent={store.updateStudent} 
+              bulkDelete={store.bulkDelete} 
               setEditingChapterPassage={setEditingChapterPassage} 
               setPassageInput={setPassageInput} 
               generateRandomPin={() => Math.floor(1000 + Math.random() * 9000).toString()} 
@@ -163,8 +169,10 @@ const AdminPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         <PassageModal 
           passageInput={passageInput} 
           setPassageInput={setPassageInput} 
-          onSave={() => { 
-            store.updateChapter(editingChapterPassage, { passageContent: passageInput }); 
+          onSave={async () => { 
+            if (store.updateChapter) {
+              await store.updateChapter(editingChapterPassage, { passageContent: passageInput }); 
+            }
             setEditingChapterPassage(null); 
           }} 
           onCancel={() => setEditingChapterPassage(null)} 
