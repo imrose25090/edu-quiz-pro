@@ -17,7 +17,7 @@ interface BulkEditorProps {
   questions: Question[];
   qSettings: any;
   setQSettings: (val: any) => void;
-  handleBulkAdd: (requiresInput: boolean) => void; // ✅ এখানে পরিবর্তন করা হয়েছে
+  handleBulkAdd: (requiresInput: boolean) => void; 
   handleDeleteQuestion: (id: string) => void;
   copyFeedback: boolean;
   setCopyFeedback: (val: boolean) => void;
@@ -33,24 +33,23 @@ export const BulkEditor: React.FC<BulkEditorProps> = ({
   
   const [adminDefinedTypes, setAdminDefinedTypes] = useState<any[]>([]);
 
-  // ফায়ারবেস থেকে ফরম্যাট লোড
+  // ✅ ফায়ারবেস থেকে ফরম্যাট লোড করার লজিক
   useEffect(() => {
     const fetchFormats = async () => {
       try {
-        // প্রথমে লোকাল স্টোরেজ চেক করা হচ্ছে (FormatSettings থেকে ডাটা পাওয়ার জন্য)
         const savedFormats = localStorage.getItem('quiz_formats');
         if (savedFormats) {
            setAdminDefinedTypes(JSON.parse(savedFormats));
            return;
         }
 
-        // লোকাল না থাকলে ফায়ারবেস থেকে আনবে
         const querySnapshot = await getDocs(collection(db, "formats"));
         const formatsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
         if (formatsData.length > 0) {
           setAdminDefinedTypes(formatsData);
         } else {
+          // ডিফল্ট ফরম্যাট যদি ডাটাবেসে কিছু না থাকে
           const defaultTypes = [
             { id: '1', name: 'Multiple Choice', type: 'MCQ', format: 'Question | Op1 | Op2 | Op3 | Op4 | Answer', requiresInput: false },
             { id: '2', name: 'True/False', type: 'TF', format: 'Question | Answer', requiresInput: false },
@@ -63,26 +62,26 @@ export const BulkEditor: React.FC<BulkEditorProps> = ({
       }
     };
 
-    fetchFormats();
+    if (activeTab === 'QUESTIONS') fetchFormats();
   }, [activeTab]);
 
-  // ডিফল্ট টাইপ সেট করা
+  // ✅ ডিফল্ট টাইপ অটো-সিলেক্ট করা (প্রথমবার লোড হওয়ার সময়)
   useEffect(() => {
     if (activeTab === 'QUESTIONS' && adminDefinedTypes.length > 0 && !qSettings.type) {
-      setQSettings({ ...qSettings, type: adminDefinedTypes[0].type });
+      setQSettings((prev: any) => ({ ...prev, type: adminDefinedTypes[0].type }));
     }
-  }, [adminDefinedTypes, activeTab, qSettings, setQSettings]);
+  }, [adminDefinedTypes, activeTab, qSettings.type, setQSettings]);
 
-  // বর্তমানে সিলেক্ট করা টাইপ অবজেক্টটি বের করা
+  // ✅ বর্তমানে সিলেক্ট করা টাইপ অবজেক্টটি বের করা
   const currentTypeObj = useMemo(() => {
-    return adminDefinedTypes.find(t => t.type === qSettings.type);
+    return adminDefinedTypes.find(t => t.type === qSettings.type) || adminDefinedTypes[0];
   }, [qSettings.type, adminDefinedTypes]);
 
   const activeFormat = currentTypeObj?.format || null;
 
-  // ফিল্টারিং লজিক
+  // ✅ ফিল্টারিং লজিক (প্রিভিউ এর জন্য)
   const filteredQuestions = useMemo(() => {
-    return questions.filter(q => 
+    return (questions || []).filter(q => 
       q.classId === selectedClassId &&
       q.subjectId === selectedSubjectId &&
       q.chapterId === qSettings.chapterId &&
@@ -106,7 +105,7 @@ export const BulkEditor: React.FC<BulkEditorProps> = ({
           <select 
             className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all" 
             value={selectedClassId} 
-            onChange={e => setSelectedClassId(e.target.value)}
+            onChange={e => { setSelectedClassId(e.target.value); setSelectedSubjectId(''); }}
           >
             <option value="">Select Class</option>
             {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -115,7 +114,7 @@ export const BulkEditor: React.FC<BulkEditorProps> = ({
           <select 
             className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all" 
             value={selectedSubjectId} 
-            onChange={e => setSelectedSubjectId(e.target.value)}
+            onChange={e => { setSelectedSubjectId(e.target.value); setQSettings({...qSettings, chapterId: ''}); }}
           >
             <option value="">Select Subject</option>
             {subjects.filter(s => s.classId === selectedClassId).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -123,7 +122,7 @@ export const BulkEditor: React.FC<BulkEditorProps> = ({
 
           <select 
             className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all" 
-            value={qSettings.chapterId} 
+            value={qSettings.chapterId || ''} 
             onChange={e => setQSettings({...qSettings, chapterId: e.target.value})}
           >
             <option value="">Select Chapter</option>
@@ -134,7 +133,7 @@ export const BulkEditor: React.FC<BulkEditorProps> = ({
             <label className="text-[10px] font-black text-indigo-500 ml-2 uppercase tracking-widest">Question Type</label>
             <select 
               className="w-full p-4 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase shadow-lg cursor-pointer outline-none mt-1 hover:bg-black transition-all" 
-              value={qSettings.type} 
+              value={qSettings.type || ''} 
               onChange={e => setQSettings({...qSettings, type: e.target.value})}
             >
               {adminDefinedTypes.map(t => <option key={t.id || t.type} value={t.type}>{t.name}</option>)}
@@ -172,9 +171,51 @@ export const BulkEditor: React.FC<BulkEditorProps> = ({
         </button>
       </div>
 
-      {/* প্রিভিউ প্যানেল আগের মতোই থাকবে */}
+      {/* ডান পাশ: প্রিভিউ প্যানেল */}
       <div className="w-full lg:w-2/3 bg-slate-50/50 p-6 rounded-[32px] border border-slate-200 flex flex-col">
-        {/* ... (বাকি প্রিভিউ কোড আপনার আগের মতোই থাকবে) */}
+        <div className="flex justify-between items-center mb-6">
+           <h3 className="font-black text-slate-800 uppercase italic">Question Preview ({filteredQuestions.length})</h3>
+        </div>
+        
+        <div className="space-y-4 overflow-y-auto max-h-[600px] pr-2 custom-scrollbar">
+          {filteredQuestions.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 opacity-20">
+               <span className="text-4xl">🏜️</span>
+               <p className="font-black uppercase text-xs mt-2">No Questions Found</p>
+            </div>
+          ) : (
+            filteredQuestions.map((q, idx) => (
+              <div key={q.id} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm relative group">
+                <button 
+                  onClick={() => handleDeleteQuestion(q.id)}
+                  className="absolute top-4 right-4 text-rose-300 hover:text-rose-600 opacity-0 group-hover:opacity-100 transition-all"
+                >
+                  🗑️
+                </button>
+                <div className="flex items-start gap-3">
+                  <span className="text-[10px] font-black bg-indigo-50 text-indigo-400 w-6 h-6 flex items-center justify-center rounded-lg">{idx + 1}</span>
+                  <div className="flex-1">
+                    <p className="font-bold text-slate-700 text-sm leading-relaxed">{q.question}</p>
+                    {q.options && (
+                      <div className="grid grid-cols-2 gap-2 mt-3">
+                        {q.options.map((opt: string, i: number) => (
+                          <div key={i} className={`text-[10px] p-2 rounded-lg border ${q.answer === opt ? 'bg-emerald-50 border-emerald-200 text-emerald-700 font-black' : 'bg-slate-50 border-slate-100 text-slate-500'}`}>
+                            {opt}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {!q.options && (
+                       <div className="mt-2 text-[10px] p-2 bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-lg inline-block font-black uppercase">
+                         Ans: {q.answer}
+                       </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
     </div>
   );
