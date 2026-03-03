@@ -10,7 +10,7 @@ interface ChapterManagerProps {
   setSelectedSubjectId: (id: string) => void;
   bulkAdd: (chapters: { name: string; classId: string; subjectId: string }[]) => void;
   deleteItem: (id: string) => void;
-  // ✅ AdminPanel এর প্রপস নামের সাথে মিল রেখে পরিবর্তন করা হয়েছে
+  bulkDelete: (collectionName: string, ids: string[]) => Promise<void>; // ✅ নতুন প্রপস
   setEditingChapterPassage: (id: string | null) => void;
   setPassageInput: (text: string) => void;
 }
@@ -25,15 +25,15 @@ const ChapterManager: React.FC<ChapterManagerProps> = ({
   setSelectedSubjectId,
   bulkAdd,
   deleteItem,
-  setEditingChapterPassage, // ✅ সঠিক নাম
-  setPassageInput           // ✅ সঠিক নাম
+  bulkDelete, // ✅ প্রপস রিসিভ করা হয়েছে
+  setEditingChapterPassage,
+  setPassageInput
 }) => {
   const [newChapters, setNewChapters] = useState('');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]); // ✅ সিলেক্টেড আইডি ট্র্যাকিং
 
-  // সিলেক্ট করা ক্লাস অনুযায়ী সাবজেক্ট ফিল্টার
+  // ফিল্টারিং
   const filteredSubjects = subjects.filter(s => s.classId === selectedClassId);
-
-  // বর্তমানে সিলেক্ট করা সাবজেক্ট অনুযায়ী চ্যাপ্টার ফিল্টার
   const filteredChapters = chapters.filter((ch: any) => 
     ch.classId === selectedClassId && ch.subjectId === selectedSubjectId
   );
@@ -43,7 +43,6 @@ const ChapterManager: React.FC<ChapterManagerProps> = ({
       alert("দয়া করে ক্লাস এবং সাবজেক্ট সিলেক্ট করুন!");
       return;
     }
-
     const names = newChapters.split('\n').map(n => n.trim()).filter(n => n !== '');
     if (names.length === 0) return;
 
@@ -58,11 +57,34 @@ const ChapterManager: React.FC<ChapterManagerProps> = ({
     alert('Chapters added successfully!');
   };
 
+  // ✅ বাল্ক ডিলিট ফাংশন
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (window.confirm(`আপনি কি নিশ্চিত যে ${selectedIds.length}টি চ্যাপ্টার ডিলিট করতে চান?`)) {
+      try {
+        await bulkDelete('chapters', selectedIds);
+        setSelectedIds([]);
+        alert('Selected chapters deleted successfully!');
+      } catch (error) {
+        console.error("Bulk delete failed:", error);
+      }
+    }
+  };
+
+  // ✅ অল সিলেক্ট ফাংশন
+  const toggleSelectAll = () => {
+    if (selectedIds.length === filteredChapters.length && filteredChapters.length > 0) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredChapters.map(ch => ch.id));
+    }
+  };
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 font-['Hind_Siliguri']">
       
       {/* বাম পাশ: ইনপুট সেকশন */}
-      <div className="bg-white p-8 rounded-[40px] shadow-sm border border-slate-100">
+      <div className="bg-white p-8 rounded-[40px] shadow-sm border border-slate-100 h-fit">
         <h3 className="text-xl font-black italic mb-6 uppercase tracking-tighter text-slate-800">Manage Chapters</h3>
         
         <div className="space-y-4 mb-6">
@@ -72,7 +94,8 @@ const ChapterManager: React.FC<ChapterManagerProps> = ({
               value={selectedClassId} 
               onChange={(e) => {
                 setSelectedClassId(e.target.value);
-                setSelectedSubjectId(''); 
+                setSelectedSubjectId('');
+                setSelectedIds([]); // ক্লিয়ার সিলেকশন
               }}
               className="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none ring-1 ring-slate-100 focus:ring-2 focus:ring-indigo-500"
             >
@@ -85,7 +108,10 @@ const ChapterManager: React.FC<ChapterManagerProps> = ({
             <label className="text-[10px] font-black uppercase text-slate-400 ml-2">2. Select Subject</label>
             <select 
               value={selectedSubjectId} 
-              onChange={(e) => setSelectedSubjectId(e.target.value)}
+              onChange={(e) => {
+                setSelectedSubjectId(e.target.value);
+                setSelectedIds([]); // ক্লিয়ার সিলেকশন
+              }}
               disabled={!selectedClassId}
               className="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none ring-1 ring-slate-100 focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
             >
@@ -113,47 +139,92 @@ const ChapterManager: React.FC<ChapterManagerProps> = ({
 
       {/* ডান পাশ: চ্যাপ্টার লিস্ট */}
       <div className="bg-white p-8 rounded-[40px] shadow-sm border border-slate-100">
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-xl font-black italic uppercase tracking-tighter text-slate-800">Registered Chapters</h3>
-          <span className="bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full text-[10px] font-black uppercase">
-            Total: {filteredChapters.length}
-          </span>
+        <div className="flex flex-col space-y-4 mb-6">
+          <div className="flex justify-between items-center">
+            <h3 className="text-xl font-black italic uppercase tracking-tighter text-slate-800">Registered Chapters</h3>
+            <span className="bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full text-[10px] font-black uppercase">
+              Total: {filteredChapters.length}
+            </span>
+          </div>
+
+          {/* ✅ বাল্ক কন্ট্রোল UI */}
+          {filteredChapters.length > 0 && (
+            <div className="flex justify-between items-center bg-slate-50 p-3 rounded-2xl border border-slate-100">
+              <div className="flex items-center gap-2 cursor-pointer" onClick={toggleSelectAll}>
+                <input 
+                  type="checkbox" 
+                  checked={selectedIds.length === filteredChapters.length && filteredChapters.length > 0}
+                  onChange={toggleSelectAll}
+                  className="w-4 h-4 accent-indigo-600"
+                />
+                <span className="text-[11px] font-black text-slate-500 uppercase tracking-tight">Select All</span>
+              </div>
+              
+              {selectedIds.length > 0 && (
+                <button 
+                  onClick={handleBulkDelete}
+                  className="bg-rose-500 hover:bg-rose-600 text-white px-4 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all shadow-lg"
+                >
+                  Delete ({selectedIds.length})
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="space-y-3 max-h-[480px] overflow-y-auto pr-2 custom-scrollbar">
           {selectedSubjectId ? (
             filteredChapters.length > 0 ? (
-              filteredChapters.map((ch: any) => (
-                <div key={ch.id} className="p-5 bg-slate-50 rounded-[24px] flex justify-between items-center border border-slate-100 group hover:border-indigo-200 transition-all">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-700">{ch.name}</span>
-                      {ch.passageContent && (
-                        <span className="bg-emerald-100 text-emerald-600 text-[8px] font-black px-2 py-0.5 rounded uppercase">Passage OK</span>
-                      )}
-                    </div>
-                    <div className="mt-2 flex gap-4">
-                       <button 
-                        onClick={() => {
-                          // ✅ AdminPanel এর লজিক অনুযায়ী প্রথমে ইনপুট সেট করে তারপর মডাল ওপেন করা হচ্ছে
-                          setPassageInput(ch.passageContent || '');
-                          setEditingChapterPassage(ch.id);
-                        }}
-                        className="text-[10px] font-black text-indigo-600 uppercase hover:text-black transition-colors"
-                      >
-                        {ch.passageContent ? '📝 Edit Passage' : '➕ Add Passage'}
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <button 
-                    onClick={() => { if(window.confirm('Delete Chapter?')) deleteItem(ch.id) }}
-                    className="text-rose-400 hover:text-rose-600 p-2 opacity-0 group-hover:opacity-100 transition-all"
+              filteredChapters.map((ch: any) => {
+                const isSelected = selectedIds.includes(ch.id);
+                return (
+                  <div 
+                    key={ch.id} 
+                    className={`p-5 rounded-[24px] flex justify-between items-center border transition-all group ${
+                      isSelected ? 'bg-indigo-50 border-indigo-200' : 'bg-slate-50 border-slate-100 hover:border-indigo-200'
+                    }`}
                   >
-                    🗑️
-                  </button>
-                </div>
-              ))
+                    <div className="flex items-center gap-4 flex-1">
+                      <input 
+                        type="checkbox" 
+                        checked={isSelected}
+                        onChange={() => {
+                          setSelectedIds(prev => 
+                            prev.includes(ch.id) ? prev.filter(i => i !== ch.id) : [...prev, ch.id]
+                          );
+                        }}
+                        className="w-5 h-5 accent-indigo-600 rounded-lg"
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-slate-700">{ch.name}</span>
+                          {ch.passageContent && (
+                            <span className="bg-emerald-100 text-emerald-600 text-[8px] font-black px-2 py-0.5 rounded uppercase">Passage OK</span>
+                          )}
+                        </div>
+                        <div className="mt-2 flex gap-4">
+                           <button 
+                            onClick={() => {
+                              setPassageInput(ch.passageContent || '');
+                              setEditingChapterPassage(ch.id);
+                            }}
+                            className="text-[10px] font-black text-indigo-600 uppercase hover:text-black transition-colors"
+                          >
+                            {ch.passageContent ? '📝 Edit Passage' : '➕ Add Passage'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <button 
+                      onClick={() => { if(window.confirm('Delete Chapter?')) deleteItem(ch.id) }}
+                      className="text-slate-300 hover:text-rose-600 p-2 transition-all"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                );
+              })
             ) : (
               <div className="text-center py-20 opacity-20 italic">No chapters found for this subject</div>
             )
