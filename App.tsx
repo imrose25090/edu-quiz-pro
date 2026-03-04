@@ -25,7 +25,7 @@ const MainContent: React.FC = () => {
   
   const { loading, language, setLanguage, questions, classes, subjects } = useApp();
 
-  // Firebase থেকে ডাটা ফেচ
+  // Firebase থেকে স্টুডেন্ট এবং টিচার ডাটা ফেচ
   useEffect(() => {
     const qStudents = query(collection(db, "students"), orderBy("createdAt", "desc"));
     const unsubStudents = onSnapshot(qStudents, (snapshot) => {
@@ -45,12 +45,10 @@ const MainContent: React.FC = () => {
     };
   }, []);
 
-  // ✅ লোগো ক্লিকের জন্য নতুন এবং শক্তিশালী ফাংশন
+  // ✅ লোগো ক্লিকের মাধ্যমে হোমপেজে ফেরা এবং সিক্রেট ট্রিগার
   const handleLogoClick = () => {
-    // যদি কেউ লগইন অবস্থায় থাকে, তবে তাকে জিজ্ঞেস করা যেতে পারে। 
-    // অথবা সরাসরি হোম পেজে পাঠাতে চাইলে নিচের লজিকটি ব্যবহার করুন:
-    handleLogout(); // এটি সব স্টেট ক্লিয়ার করে ল্যান্ডিং পেজে নিয়ে যাবে
-    handleSecretAdminTrigger(); // সিক্রেট ক্লিকের কাউন্ট বজায় রাখবে
+    handleLogout(); 
+    handleSecretAdminTrigger(); 
   };
 
   const handleLogout = () => {
@@ -82,51 +80,69 @@ const MainContent: React.FC = () => {
     if (pass === "admin789") { 
       setIsAdminLoggedIn(true);
     } else {
-      alert("ভুল পাসওয়ার্ড!");
+      alert(language === 'bn' ? "ভুল পাসওয়ার্ড!" : "Wrong Password!");
     }
   };
 
-  // --- Student & Teacher Logic ---
+  // --- Student Registration ---
   const handleStudentRegister = async (name: string, pass: string) => {
     try {
       const exists = students.find(s => s.name.toLowerCase() === name.toLowerCase());
-      if (exists) { alert("এই নামে অলরেডি অ্যাকাউন্ট আছে!"); return; }
+      if (exists) { 
+        alert(language === 'bn' ? "এই নামে অলরেডি অ্যাকাউন্ট আছে!" : "Account already exists!"); 
+        return; 
+      }
       await addDoc(collection(db, "students"), {
         name, password: pass, createdAt: serverTimestamp(), role: 'student', isFrozen: false
       });
-      alert("অ্যাকাউন্ট তৈরি হয়েছে!");
-    } catch (error) { alert("রেজিস্ট্রেশন ব্যর্থ হয়েছে।"); }
+      alert(language === 'bn' ? "অ্যাকাউন্ট তৈরি হয়েছে!" : "Registration Successful!");
+    } catch (error) { 
+      alert("Registration failed."); 
+    }
   };
 
   const handleStudentLoginValidation = (name: string, pass: string) => {
     const student = students.find(s => s.name === name && s.password === pass);
     if (student) {
-      if (student.isFrozen) { alert("অ্যাকাউন্ট ফ্রিজ করা হয়েছে।"); return false; }
+      if (student.isFrozen) { 
+        alert(language === 'bn' ? "অ্যাকাউন্ট ফ্রিজ করা হয়েছে।" : "Account is frozen."); 
+        return false; 
+      }
       setLoggedInStudent(student);
       setCurrentRole(UserRole.STUDENT);
       return true;
     }
-    alert("ভুল নাম বা পাসওয়ার্ড!");
+    alert(language === 'bn' ? "ভুল নাম বা পাসওয়ার্ড!" : "Invalid credentials!");
     return false;
   };
 
   const handleTeacherLoginValidation = (email: string, pass: string) => {
     const teacher = teachers.find(t => t.email === email && t.password === pass);
     if (teacher) {
-      if (teacher.isFrozen) { alert("অ্যাকাউন্ট স্থগিত করা হয়েছে।"); return false; }
+      if (teacher.isFrozen) { 
+        alert(language === 'bn' ? "অ্যাকাউন্ট স্থগিত করা হয়েছে।" : "Account suspended."); 
+        return false; 
+      }
       setLoggedInTeacher(teacher);
       setCurrentRole(UserRole.TEACHER);
       return true;
     }
-    alert("ভুল ইমেইল বা পাসওয়ার্ড!");
+    alert(language === 'bn' ? "ভুল ইমেইল বা পাসওয়ার্ড!" : "Invalid credentials!");
     return false;
   };
+
+  // ⚠️ ডাটাবেসে ক্লাস না থাকলে সেই প্রশ্নগুলো ফিল্টার করে বাদ দেওয়া (অনাথ প্রশ্ন হ্যান্ডলিং)
+  const validQuestions = questions.filter(q => 
+    classes.some(c => c.id === q.classId)
+  );
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50">
       <div className="text-center">
         <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-        <p className="font-bold text-slate-500 text-xs">লোড হচ্ছে...</p>
+        <p className="font-black text-slate-500 text-xs uppercase tracking-widest">
+          {language === 'bn' ? 'লোড হচ্ছে...' : 'Loading App...'}
+        </p>
       </div>
     </div>
   );
@@ -134,15 +150,15 @@ const MainContent: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-['Hind_Siliguri']">
       {/* --- Navbar Section --- */}
-      <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100 px-4 md:px-8 py-4 flex justify-between items-center shadow-sm">
+      <nav className="sticky top-0 z-[60] bg-white/80 backdrop-blur-md border-b border-slate-100 px-4 md:px-8 py-4 flex justify-between items-center shadow-sm">
         <div 
-          onClick={handleLogoClick} // ✅ এখানে handleLogoClick ব্যবহার করা হয়েছে
+          onClick={handleLogoClick}
           className="flex items-center space-x-4 cursor-pointer group select-none"
         >
           <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-black text-2xl shadow-lg transform group-hover:rotate-6 transition-transform">E</div>
           <div>
             <h1 className="text-2xl md:text-3xl font-black text-slate-900 leading-none tracking-tighter">
-              EduQuiz <span className="text-blue-600">Pro</span>
+              EduQuiz <span className="text-indigo-600">Pro</span>
             </h1>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-1">Smart Assessment System</p>
           </div>
@@ -155,22 +171,23 @@ const MainContent: React.FC = () => {
       </nav>
 
       <main className="animate-in fade-in duration-700">
-        {/* ল্যান্ডিং পেজ কন্ডিশন */}
+        {/* ল্যান্ডিং পেজ */}
         {!currentRole && !isSecretAdminMode && !isAdminLoggedIn && !loggedInStudent && !loggedInTeacher && (
           <LandingPage 
             onSelectRole={setCurrentRole} 
             onSecretClick={handleSecretAdminTrigger}
-            totalQuestions={questions?.length || 0}
+            totalQuestions={validQuestions.length} // শুধুমাত্র ভ্যালিড প্রশ্ন দেখাবে
             totalClasses={classes?.length || 0}
             totalSubjects={subjects?.length || 0}
           />
         )}
 
-        {/* অন্যান্য প্যানেল রেন্ডারিং */}
+        {/* এডমিন লগইন (সিক্রেট মোড) */}
         {isSecretAdminMode && !isAdminLoggedIn && (
           <AdminLogin onLogin={handleAdminLogin} onCancel={() => setIsSecretAdminMode(false)} />
         )}
 
+        {/* প্যানেল সমূহ */}
         {isAdminLoggedIn && <AdminPanel onBack={handleLogout} />}
 
         {(currentRole === UserRole.TEACHER || loggedInTeacher) && !isAdminLoggedIn && (
