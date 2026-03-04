@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Quiz, Class, Subject } from '../../types';
+// @ts-ignore
+import html2pdf from 'html2pdf.js';
 
 interface QuestionPaperViewProps {
   selectedQuiz: Quiz;
@@ -8,8 +10,6 @@ interface QuestionPaperViewProps {
   branding: { name: string; motto: string; address: string };
   showAnswers: boolean;
   setShowAnswers: (val: boolean) => void;
-  onDownload: (ref: React.RefObject<HTMLDivElement | null>, filename: string) => void;
-  paperRef: React.RefObject<HTMLDivElement | null>;
   onBack: () => void;
 }
 
@@ -20,8 +20,6 @@ export const QuestionPaperView: React.FC<QuestionPaperViewProps> = ({
   branding: initialBranding,
   showAnswers,
   setShowAnswers,
-  onDownload,
-  paperRef,
   onBack,
 }) => {
   const [paperName, setPaperName] = useState(initialBranding.name);
@@ -36,6 +34,9 @@ export const QuestionPaperView: React.FC<QuestionPaperViewProps> = ({
   const [showQuote, setShowQuote] = useState(true);
   const [showSignature, setShowSignature] = useState(true);
   const [quote, setQuote] = useState("");
+
+  // রিফেন্স এড করা হলো
+  const paperRef = useRef<HTMLDivElement>(null);
 
   const workingFonts = {
     "Professional & Clean": [
@@ -66,6 +67,28 @@ export const QuestionPaperView: React.FC<QuestionPaperViewProps> = ({
     setQuote(quotes[Math.floor(Math.random() * quotes.length)]);
   }, []);
 
+  // ইন্টারনাল ডাউনলোড হ্যান্ডলার
+  const handleInternalDownload = () => {
+    const element = paperRef.current;
+    if (!element) return;
+
+    const opt = {
+      margin: 0,
+      filename: `${selectedQuiz.title.replace(/\s+/g, '_')}_Question_Paper.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { 
+        scale: 2, 
+        useCORS: true, 
+        scrollY: 0,
+        windowWidth: 800 // A4 সাইজ রেন্ডারিং নিশ্চিত করতে
+      },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+    };
+
+    html2pdf().set(opt).from(element).save();
+  };
+
   return (
     <div className="flex flex-col lg:flex-row gap-6 animate-in fade-in duration-500 font-['Hind_Siliguri']">
       
@@ -77,14 +100,14 @@ export const QuestionPaperView: React.FC<QuestionPaperViewProps> = ({
 
         <div className="space-y-4">
           <h3 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Style & Branding</h3>
-          <input className="w-full p-3 bg-slate-50 border-none rounded-xl text-sm font-bold outline-none ring-offset-2 focus:ring-2 ring-indigo-500" value={paperName} onChange={(e) => setPaperName(e.target.value)} placeholder="Institute Name" />
-          <input className="w-full p-3 bg-slate-50 border-none rounded-xl text-sm font-bold outline-none ring-offset-2 focus:ring-2 ring-indigo-500" value={paperMotto} onChange={(e) => setPaperMotto(e.target.value)} placeholder="Motto" />
+          <input className="w-full p-3 bg-slate-50 border-none rounded-xl text-sm font-bold outline-none ring-offset-2 focus:ring-2 ring-indigo-500 text-black" value={paperName} onChange={(e) => setPaperName(e.target.value)} placeholder="Institute Name" />
+          <input className="w-full p-3 bg-slate-50 border-none rounded-xl text-sm font-bold outline-none ring-offset-2 focus:ring-2 ring-indigo-500 text-black" value={paperMotto} onChange={(e) => setPaperMotto(e.target.value)} placeholder="Motto" />
           
           <label className="text-[10px] font-black text-slate-400 block -mb-2 ml-1 uppercase">Select Title Font</label>
           <select 
             value={titleFont} 
             onChange={(e) => setTitleFont(e.target.value)} 
-            className="w-full p-3 bg-slate-50 border-none rounded-xl text-xs font-bold outline-none cursor-pointer hover:bg-slate-100 transition-colors"
+            className="w-full p-3 bg-slate-50 border-none rounded-xl text-xs font-bold outline-none cursor-pointer hover:bg-slate-100 transition-colors text-black"
           >
             {Object.entries(workingFonts).map(([category, fonts]) => (
               <optgroup label={category} key={category}>
@@ -113,11 +136,11 @@ export const QuestionPaperView: React.FC<QuestionPaperViewProps> = ({
             </div>
             
             <div className="grid grid-cols-2 gap-2">
-              <select value={columns} onChange={(e) => setColumns(parseInt(e.target.value))} className="w-full p-2 bg-slate-50 border-none rounded-lg text-[10px] font-bold outline-none">
+              <select value={columns} onChange={(e) => setColumns(parseInt(e.target.value))} className="w-full p-2 bg-slate-50 border-none rounded-lg text-[10px] font-bold outline-none text-black">
                 <option value={1}>1 Column</option>
                 <option value={2}>2 Columns</option>
               </select>
-              <select value={numberStyle} onChange={(e) => setNumberStyle(e.target.value)} className="w-full p-2 bg-slate-50 border-none rounded-lg text-[10px] font-bold outline-none">
+              <select value={numberStyle} onChange={(e) => setNumberStyle(e.target.value)} className="w-full p-2 bg-slate-50 border-none rounded-lg text-[10px] font-bold outline-none text-black">
                 <option value="decimal">1, 2, 3...</option>
                 <option value="upper-roman">I, II, III...</option>
                 <option value="upper-alpha">A, B, C...</option>
@@ -126,7 +149,7 @@ export const QuestionPaperView: React.FC<QuestionPaperViewProps> = ({
           </div>
         </div>
 
-        <button onClick={() => onDownload(paperRef, `Paper_${selectedQuiz.code}`)} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-xl hover:bg-indigo-700 transition-all active:scale-95">
+        <button onClick={handleInternalDownload} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-xl hover:bg-indigo-700 transition-all active:scale-95">
           Download PDF
         </button>
       </div>
@@ -192,16 +215,15 @@ export const QuestionPaperView: React.FC<QuestionPaperViewProps> = ({
                 selectedQuiz.questions.map((q: any) => (
                   <li key={q.id} className="break-inside-avoid">
                     <div className="flex justify-between items-start gap-2 mb-2">
-                      {/* Robust text rendering: checks for 'text' then 'question' */}
                       <p className="font-bold text-black leading-snug">
-                        {q.text || q.question || "Question Content Missing"}
+                        {q.text || q.questionText || q.question || "Question Missing"}
                       </p>
                       <span className="text-[11px] font-bold text-slate-500 whitespace-nowrap">[{q.marks || 1}]</span>
                     </div>
 
-                    {q.type === 'MCQ' && (
+                    {q.type === 'MCQ' && q.options && (
                       <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-2 ml-1 text-black">
-                        {q.options?.map((opt: string, idx: number) => (
+                        {q.options.map((opt: string, idx: number) => (
                           <div key={idx} className="flex items-center gap-2">
                             <span className="w-5 h-5 rounded-full border border-black flex items-center justify-center text-[10px] font-black shrink-0">
                               {String.fromCharCode(97 + idx)}
@@ -216,7 +238,7 @@ export const QuestionPaperView: React.FC<QuestionPaperViewProps> = ({
                       <div className="mt-2 bg-slate-50 border-l-4 border-indigo-600 px-3 py-1 rounded-sm">
                         <p className="text-indigo-600 font-black text-[11px] flex items-center gap-2">
                           <span className="uppercase opacity-60">ANS:</span>
-                          <span className="text-[1.1em]">{q.correctAnswer || q.answer || q.ans || "N/A"}</span>
+                          <span className="text-[1.1em]">{q.correctAnswer || q.answer || "N/A"}</span>
                         </p>
                       </div>
                     )}
