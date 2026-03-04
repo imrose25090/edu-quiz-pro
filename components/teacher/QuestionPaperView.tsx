@@ -25,9 +25,8 @@ export const QuestionPaperView: React.FC<QuestionPaperViewProps> = ({
   const [paperName, setPaperName] = useState(initialBranding.name);
   const [paperMotto, setPaperMotto] = useState(initialBranding.motto);
   const [fontSize, setFontSize] = useState(14);
-  const [margin, setMargin] = useState(40);
-  const [lineSpacing, setLineSpacing] = useState(1.5);
-  const [titleFont, setTitleFont] = useState("'Hind Siliguri', sans-serif");
+  const [margin, setMargin] = useState(20);
+  const [lineSpacing, setLineSpacing] = useState(1.2);
   const [columns, setColumns] = useState(1);
   const [numberStyle, setNumberStyle] = useState('decimal');
   
@@ -35,27 +34,7 @@ export const QuestionPaperView: React.FC<QuestionPaperViewProps> = ({
   const [showSignature, setShowSignature] = useState(true);
   const [quote, setQuote] = useState("");
 
-  // রিফেন্স এড করা হলো
   const paperRef = useRef<HTMLDivElement>(null);
-
-  const workingFonts = {
-    "Professional & Clean": [
-      { name: "Default Bangla", value: "'Hind Siliguri', sans-serif" },
-      { name: "Modern Sans", value: "'Inter', sans-serif" },
-      { name: "Classic Serif", value: "'Merriweather', serif" },
-      { name: "Formal Arial", value: "Arial, sans-serif" }
-    ],
-    "Bold & Impact": [
-      { name: "Impact Style", value: "Impact, Charcoal, sans-serif" },
-      { name: "Bebas Neue Look", value: "'Oswald', sans-serif" },
-      { name: "Gaming Montserrat", value: "'Montserrat', sans-serif" }
-    ],
-    "Elegant & Script": [
-      { name: "Playfair Luxury", value: "'Playfair Display', serif" },
-      { name: "Dancing Script", value: "'Dancing Script', cursive" },
-      { name: "Georgia Serif", value: "Georgia, serif" }
-    ]
-  };
 
   useEffect(() => {
     const quotes = [
@@ -67,20 +46,19 @@ export const QuestionPaperView: React.FC<QuestionPaperViewProps> = ({
     setQuote(quotes[Math.floor(Math.random() * quotes.length)]);
   }, []);
 
-  // ইন্টারনাল ডাউনলোড হ্যান্ডলার
   const handleInternalDownload = () => {
     const element = paperRef.current;
     if (!element) return;
 
     const opt = {
       margin: 0,
-      filename: `${selectedQuiz.title.replace(/\s+/g, '_')}_Question_Paper.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
+      filename: `${selectedQuiz.title.replace(/\s+/g, '_')}_Paper.pdf`,
+      image: { type: 'jpeg', quality: 1.0 },
       html2canvas: { 
-        scale: 2, 
+        scale: 3, 
         useCORS: true, 
         scrollY: 0,
-        windowWidth: 800 // A4 সাইজ রেন্ডারিং নিশ্চিত করতে
+        letterRendering: true,
       },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
       pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
@@ -90,192 +68,196 @@ export const QuestionPaperView: React.FC<QuestionPaperViewProps> = ({
   };
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 animate-in fade-in duration-500 font-['Hind_Siliguri']">
+    <div className="flex flex-col lg:flex-row gap-6 p-2 md:p-6 animate-in fade-in duration-500 font-['Hind_Siliguri'] bg-slate-100 min-h-screen">
       
-      {/* Sidebar Controls */}
-      <div className="w-full lg:w-80 space-y-6 bg-white p-6 rounded-[32px] border border-slate-200 h-fit sticky top-6 shadow-sm no-print">
-        <button onClick={onBack} className="w-full py-3 bg-slate-50 text-slate-500 rounded-2xl font-black text-xs uppercase mb-4 hover:bg-slate-100 transition-all">
-          ← Back to Panel
+      {/* Sidebar Controls - All Buttons Restored */}
+      <div className="w-full lg:w-80 space-y-4 bg-white p-5 rounded-[24px] border border-slate-200 h-fit lg:sticky lg:top-6 shadow-xl no-print order-2 lg:order-1">
+        <button onClick={onBack} className="w-full py-3 bg-slate-100 text-slate-600 rounded-xl font-black text-xs uppercase hover:bg-slate-200 transition-all">
+          ← Back
         </button>
 
-        <div className="space-y-4">
-          <h3 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Style & Branding</h3>
-          <input className="w-full p-3 bg-slate-50 border-none rounded-xl text-sm font-bold outline-none ring-offset-2 focus:ring-2 ring-indigo-500 text-black" value={paperName} onChange={(e) => setPaperName(e.target.value)} placeholder="Institute Name" />
-          <input className="w-full p-3 bg-slate-50 border-none rounded-xl text-sm font-bold outline-none ring-offset-2 focus:ring-2 ring-indigo-500 text-black" value={paperMotto} onChange={(e) => setPaperMotto(e.target.value)} placeholder="Motto" />
+        <div className="space-y-4 pt-2">
+          <h3 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest border-b pb-1">Customize Paper</h3>
           
-          <label className="text-[10px] font-black text-slate-400 block -mb-2 ml-1 uppercase">Select Title Font</label>
-          <select 
-            value={titleFont} 
-            onChange={(e) => setTitleFont(e.target.value)} 
-            className="w-full p-3 bg-slate-50 border-none rounded-xl text-xs font-bold outline-none cursor-pointer hover:bg-slate-100 transition-colors text-black"
-          >
-            {Object.entries(workingFonts).map(([category, fonts]) => (
-              <optgroup label={category} key={category}>
-                {fonts.map(f => <option key={f.value} value={f.value}>{f.name}</option>)}
-              </optgroup>
-            ))}
-          </select>
-        </div>
+          <div className="space-y-3">
+            {/* Font Size Control */}
+            <div>
+              <label className="flex justify-between text-[10px] font-bold text-slate-500 uppercase">
+                <span>Font Size</span>
+                <span className="text-indigo-600 font-black">{fontSize}px</span>
+              </label>
+              <input type="range" min="8" max="30" step="1" value={fontSize} onChange={(e) => setFontSize(parseInt(e.target.value))} className="w-full accent-indigo-600" />
+            </div>
 
-        <div className="space-y-4 pt-4 border-t border-slate-100">
-          <h3 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest text-center">Layout & Spacing</h3>
-          
-          <div className="grid grid-cols-2 gap-2">
-            <button onClick={() => setShowQuote(!showQuote)} className={`p-2 rounded-xl text-[10px] font-bold transition-all ${showQuote ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 text-slate-400'}`}>Quotes</button>
-            <button onClick={() => setShowSignature(!showSignature)} className={`p-2 rounded-xl text-[10px] font-bold transition-all ${showSignature ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 text-slate-400'}`}>Signature</button>
+            {/* Spacing Control - Can go to 0 */}
+            <div>
+              <label className="flex justify-between text-[10px] font-bold text-slate-500 uppercase">
+                <span>Line Spacing</span>
+                <span className="text-indigo-600 font-black">{lineSpacing}</span>
+              </label>
+              <input type="range" min="0" max="3.0" step="0.1" value={lineSpacing} onChange={(e) => setLineSpacing(parseFloat(e.target.value))} className="w-full accent-indigo-600" />
+            </div>
+
+            {/* Margin Control */}
+            <div>
+              <label className="flex justify-between text-[10px] font-bold text-slate-500 uppercase">
+                <span>Page Margin</span>
+                <span className="text-indigo-600 font-black">{margin}px</span>
+              </label>
+              <input type="range" min="0" max="100" step="1" value={margin} onChange={(e) => setMargin(parseInt(e.target.value))} className="w-full accent-indigo-600" />
+            </div>
           </div>
 
-          <div className="space-y-3">
-            <div>
-              <label className="text-[9px] font-bold text-slate-400 block mb-1 uppercase">Line Spacing: {lineSpacing}</label>
-              <input type="range" min="1.0" max="3.0" step="0.1" value={lineSpacing} onChange={(e) => setLineSpacing(parseFloat(e.target.value))} className="w-full accent-indigo-600" />
-            </div>
-            <div>
-              <label className="text-[9px] font-bold text-slate-400 block mb-1 uppercase">Margin: {margin}px</label>
-              <input type="range" min="10" max="100" value={margin} onChange={(e) => setMargin(parseInt(e.target.value))} className="w-full accent-indigo-600" />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-2">
-              <select value={columns} onChange={(e) => setColumns(parseInt(e.target.value))} className="w-full p-2 bg-slate-50 border-none rounded-lg text-[10px] font-bold outline-none text-black">
+          <div className="grid grid-cols-2 gap-2 pt-2">
+             <select value={columns} onChange={(e) => setColumns(parseInt(e.target.value))} className="p-2 bg-slate-50 border rounded-lg text-xs font-bold text-black outline-none">
                 <option value={1}>1 Column</option>
                 <option value={2}>2 Columns</option>
-              </select>
-              <select value={numberStyle} onChange={(e) => setNumberStyle(e.target.value)} className="w-full p-2 bg-slate-50 border-none rounded-lg text-[10px] font-bold outline-none text-black">
-                <option value="decimal">1, 2, 3...</option>
-                <option value="upper-roman">I, II, III...</option>
-                <option value="upper-alpha">A, B, C...</option>
-              </select>
-            </div>
+             </select>
+             <select value={numberStyle} onChange={(e) => setNumberStyle(e.target.value)} className="p-2 bg-slate-50 border rounded-lg text-xs font-bold text-black outline-none">
+                <option value="decimal">1, 2, 3</option>
+                <option value="upper-roman">I, II, III</option>
+             </select>
           </div>
         </div>
 
-        <button onClick={handleInternalDownload} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-xl hover:bg-indigo-700 transition-all active:scale-95">
-          Download PDF
+        <button onClick={handleInternalDownload} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-lg hover:bg-indigo-700 transition-all active:scale-95 uppercase text-xs">
+          Download Question PDF
         </button>
       </div>
 
       {/* Preview Area */}
-      <div className="flex-1 overflow-x-auto pb-10">
+      <div className="flex-1 order-1 lg:order-2 overflow-x-auto pb-10">
         <div className="flex justify-center mb-6 no-print gap-4">
-          <div className="flex bg-slate-100 p-1 rounded-2xl shadow-inner">
-            <button onClick={() => setShowAnswers(false)} className={`px-8 py-2 rounded-xl text-xs font-black uppercase transition-all ${!showAnswers ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400'}`}>Questions</button>
-            <button onClick={() => setShowAnswers(true)} className={`px-8 py-2 rounded-xl text-xs font-black uppercase transition-all ${showAnswers ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400'}`}>Answer Key</button>
+          <div className="flex bg-white p-1 rounded-2xl shadow-sm border">
+            <button onClick={() => setShowAnswers(false)} className={`px-6 py-2 rounded-xl text-xs font-black uppercase transition-all ${!showAnswers ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400'}`}>Questions</button>
+            <button onClick={() => setShowAnswers(true)} className={`px-6 py-2 rounded-xl text-xs font-black uppercase transition-all ${showAnswers ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400'}`}>Answer Key</button>
           </div>
         </div>
 
-        <div
-          ref={paperRef}
-          className="bg-white mx-auto shadow-2xl relative"
-          style={{
-            width: '210mm',
-            minHeight: '297mm',
-            padding: `${margin}px`,
-            fontSize: `${fontSize}px`,
-            fontFamily: "'Hind Siliguri', sans-serif",
-            color: '#000',
-            display: 'block'
-          }}
-        >
-          {/* Header Section */}
-          <div className="text-center border-b-2 border-black pb-4 mb-8">
-            <h1 
-              style={{ fontFamily: titleFont }} 
-              className="text-4xl font-black text-black uppercase tracking-tight leading-none mb-1"
-            >
-              {paperName}
-            </h1>
-            <p className="text-sm font-bold text-blue-600 uppercase tracking-[0.2em] italic">{paperMotto}</p>
+        <div className="flex justify-center">
+          <div
+            ref={paperRef}
+            className="bg-white shadow-2xl relative"
+            style={{
+              width: '210mm',
+              minHeight: '297mm',
+              padding: `${margin}px`,
+              fontSize: `${fontSize}px`,
+              fontFamily: "'Hind Siliguri', sans-serif",
+              color: '#000',
+              display: 'block'
+            }}
+          >
+            {/* Header - No Color */}
+            <div className="text-center border-b-2 border-black pb-4 mb-6">
+              <h1 className="text-4xl font-black uppercase tracking-tight leading-none mb-2 text-black">
+                {paperName}
+              </h1>
+              <p className="text-sm font-bold text-slate-700 uppercase tracking-widest leading-none">{paperMotto}</p>
 
-            <div className="grid grid-cols-3 gap-2 mt-4 text-[13px] font-bold border-t border-dashed border-slate-300 pt-3 text-slate-800">
-              <div className="text-left leading-normal">
-                <p>Class: {classes.find(c => c.id === selectedQuiz.classId)?.name || 'N/A'}</p>
-                <p>Subject: {subjects.find(s => s.id === selectedQuiz.subjectId)?.name || 'N/A'}</p>
-              </div>
-              <div className="flex justify-center items-center">
-                <span className="border-2 border-black px-4 py-1 font-black uppercase text-sm tracking-tighter">{selectedQuiz.title}</span>
-              </div>
-              <div className="text-right leading-normal">
-                <p>Full Marks: {selectedQuiz.config?.totalMarks || 0}</p>
-                <p>Time: {selectedQuiz.config?.totalTime || 0} Min</p>
+              <div className="grid grid-cols-3 gap-2 mt-4 text-[13px] font-bold border-t border-dashed border-black pt-3 text-black">
+                <div className="text-left leading-tight">
+                  <p>শ্রেণী: {classes.find(c => c.id === selectedQuiz.classId)?.name || 'N/A'}</p>
+                  <p>বিষয়: {subjects.find(s => s.id === selectedQuiz.subjectId)?.name || 'N/A'}</p>
+                </div>
+                <div className="flex justify-center items-center">
+                  <span className="border-2 border-black px-4 py-1 font-black uppercase text-xs tracking-tighter">{selectedQuiz.title}</span>
+                </div>
+                <div className="text-right leading-tight">
+                  <p>পূর্ণমান: {selectedQuiz.config?.totalMarks || 0}</p>
+                  <p>সময়: {selectedQuiz.config?.totalTime || 0} মিনিট</p>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Questions Container */}
-          <div style={{ 
-            columnCount: columns, 
-            columnGap: '40px', 
-            columnRule: columns > 1 ? '1px solid #000' : 'none',
-            color: '#000',
-            position: 'relative',
-            zIndex: 10
-          }}>
-            <ol style={{ listStyleType: numberStyle, paddingLeft: '25px', lineHeight: lineSpacing }} className="space-y-6">
-              {selectedQuiz.questions && selectedQuiz.questions.length > 0 ? (
-                selectedQuiz.questions.map((q: any) => (
-                  <li key={q.id} className="break-inside-avoid">
-                    <div className="flex justify-between items-start gap-2 mb-2">
-                      <p className="font-bold text-black leading-snug">
-                        {q.text || q.questionText || q.question || "Question Missing"}
-                      </p>
-                      <span className="text-[11px] font-bold text-slate-500 whitespace-nowrap">[{q.marks || 1}]</span>
+            {/* Questions Section */}
+            <div style={{ 
+              columnCount: columns, 
+              columnGap: '40px', 
+              columnRule: columns > 1 ? '1px solid #000' : 'none'
+            }}>
+              <ol style={{ listStyleType: numberStyle, paddingLeft: '25px', lineHeight: lineSpacing }} className="space-y-4">
+                {selectedQuiz.questions?.map((q: any) => (
+                  <li key={q.id} style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }} className="block">
+                    <div className="flex justify-between items-start gap-2 mb-1">
+                      <p className="font-bold text-black">{q.text || q.questionText || q.question}</p>
+                      <span className="text-[11px] font-bold text-black whitespace-nowrap">[{q.marks || 1}]</span>
                     </div>
 
                     {q.type === 'MCQ' && q.options && (
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-2 ml-1 text-black">
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-1 ml-1 text-black">
                         {q.options.map((opt: string, idx: number) => (
                           <div key={idx} className="flex items-center gap-2">
                             <span className="w-5 h-5 rounded-full border border-black flex items-center justify-center text-[10px] font-black shrink-0">
                               {String.fromCharCode(97 + idx)}
                             </span>
-                            <span className="font-medium text-black">{opt}</span>
+                            <span>{opt}</span>
                           </div>
                         ))}
                       </div>
                     )}
 
+                    {/* Answer Highlight with Forced PDF Color */}
                     {showAnswers && (
-                      <div className="mt-2 bg-slate-50 border-l-4 border-indigo-600 px-3 py-1 rounded-sm">
-                        <p className="text-indigo-600 font-black text-[11px] flex items-center gap-2">
-                          <span className="uppercase opacity-60">ANS:</span>
-                          <span className="text-[1.1em]">{q.correctAnswer || q.answer || "N/A"}</span>
-                        </p>
+                      <div 
+                        className="mt-2"
+                        style={{
+                          background: '#4f46e5 !important',
+                          backgroundColor: '#4f46e5',
+                          padding: '3px 10px',
+                          borderRadius: '4px',
+                          display: 'inline-block',
+                          color: '#ffffff',
+                          WebkitPrintColorAdjust: 'exact',
+                          printColorAdjust: 'exact'
+                        }}
+                      >
+                        <span style={{ fontWeight: 900, fontSize: '11px', color: '#ffffff' }}>
+                          ANS: {q.correctAnswer || q.answer || "N/A"}
+                        </span>
                       </div>
                     )}
                   </li>
-                ))
-              ) : (
-                <p className="text-center text-slate-400">No questions available</p>
-              )}
-            </ol>
-          </div>
+                ))}
+              </ol>
+            </div>
 
-          {/* Footer Section */}
-          <div className="mt-16 break-inside-avoid relative z-10">
-            {showQuote && quote && (
-              <div className="border-t border-b border-slate-100 py-4 mb-8 text-center">
-                <p className="text-slate-400 italic text-sm font-medium px-10">{quote}</p>
-              </div>
-            )}
-
-            <div className="flex justify-between items-end">
-              <div className="text-left">
-                <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-1">Generated by</p>
-                <h4 className="text-lg font-black tracking-tighter text-slate-900 leading-none">EduQuiz Pro</h4>
-              </div>
-              
-              {showSignature && (
-                <div className="text-right pb-2">
-                  <div className="w-44 border-t-2 border-black mb-1"></div>
-                  <p className="text-[10px] font-black uppercase text-slate-900 tracking-wider">Invigilator Signature</p>
+            {/* Footer */}
+            <div style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }} className="mt-12 relative z-10">
+              {showQuote && quote && (
+                <div 
+                  className="py-3 mb-8 text-center"
+                  style={{ borderTop: '1px solid #bfdbfe', borderBottom: '1px solid #bfdbfe', backgroundColor: '#eff6ff', WebkitPrintColorAdjust: 'exact' }}
+                >
+                  <p style={{ color: '#2563eb', fontStyle: 'italic', fontSize: '14px', fontWeight: 'bold' }}>
+                    {quote}
+                  </p>
                 </div>
               )}
+              
+              <div className="flex justify-between items-end">
+                <div className="flex items-center gap-2">
+                  <div style={{ width: '32px', height: '32px', backgroundColor: '#2563eb', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', WebkitPrintColorAdjust: 'exact' }}>
+                    <span style={{ color: 'white', fontWeight: 900, fontSize: '14px' }}>E</span>
+                  </div>
+                  <h4 className="text-lg font-black text-black">
+                    EduQuiz <span style={{ color: '#2563eb' }}>PRO</span>
+                  </h4>
+                </div>
+                
+                {showSignature && (
+                  <div className="text-right">
+                    <div className="w-44 border-t-2 border-black mb-1"></div>
+                    <p className="text-[10px] font-black uppercase text-black">Invigilator Signature</p>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
 
-          {/* Watermark */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03] rotate-[-45deg] z-0 select-none overflow-hidden">
-             <h1 className="text-[120px] font-black uppercase whitespace-nowrap">{paperName}</h1>
+            {/* Watermark */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03] rotate-[-45deg] z-0 overflow-hidden">
+               <h1 className="text-[120px] font-black uppercase text-black whitespace-nowrap">{paperName}</h1>
+            </div>
           </div>
         </div>
       </div>
