@@ -47,6 +47,7 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
 
   const style = getRankStyle(rankData.rank);
 
+  // ✅ ফিক্সড ডাউনলোড ফাংশন
   const handleDownload = () => {
     const element = document.getElementById('premium-transcript');
     if (!element) return;
@@ -54,18 +55,21 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
     const fileName = `${quiz.title.replace(/\s+/g, '_')}_${attempt.studentName.replace(/\s+/g, '_')}.pdf`;
 
     const opt = {
-      margin: 0,
+      margin: 5,
       filename: fileName,
-      image: { type: 'jpeg', quality: 1.0 },
+      image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { 
-        scale: 3, 
+        scale: 2, // ৩ স্কেলে মেমোরি ইস্যু হতে পারে, ২ নিরাপদ
         useCORS: true, 
-        scrollY: 0,
-        windowWidth: 800 
+        scrollY: 0, // স্ক্রল পজিশন জিরো না থাকলে সাদা পেজ আসে
+        windowWidth: 1000, // একটি ফিক্সড উইন্ডো উইডথ নিশ্চিত করা
+        letterRendering: true
       },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
       pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
     };
+
+    // ডাউনলোড শুরু করার আগে কনসোলে এরর চেক করতে পারেন
     html2pdf().set(opt).from(element).save();
   };
 
@@ -81,7 +85,7 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
             </button>
             {isEditingName && (
               <input 
-                className="border-2 border-indigo-600 px-2 py-1 rounded-lg font-bold text-xs outline-none w-32"
+                className="border-2 border-indigo-600 px-2 py-1 rounded-lg font-bold text-xs outline-none w-32 text-black"
                 value={coachingName}
                 onChange={(e) => saveCoachingName(e.target.value)}
                 autoFocus
@@ -100,11 +104,11 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
             
             {/* Header */}
             <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-              <h1 style={{ fontSize: '52px', fontWeight: '1000', color: '#1e40af', margin: '0', textTransform: 'uppercase', lineHeight: '1' }}>
+              <h1 style={{ fontSize: '42px', fontWeight: '1000', color: '#1e40af', margin: '0', textTransform: 'uppercase', lineHeight: '1.2' }}>
                 {coachingName}
               </h1>
               <div style={{ height: '4px', width: '100px', backgroundColor: '#3b82f6', margin: '15px auto' }}></div>
-              <p style={{ fontSize: '16px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase', letterSpacing: '5px' }}>
+              <p style={{ fontSize: '14px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase', letterSpacing: '5px' }}>
                 Academic Transcript Report
               </p>
             </div>
@@ -113,7 +117,7 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr 1fr', gap: '15px', marginBottom: '40px' }}>
               <div style={{ padding: '25px 10px', backgroundColor: '#f0f9ff', borderRadius: '25px', textAlign: 'center', border: '2px solid #bae6fd' }}>
                 <span style={{ fontSize: '12px', fontWeight: '900', color: '#0369a1', textTransform: 'uppercase' }}>Student</span>
-                <p style={{ fontSize: '26px', fontWeight: '1000', color: '#0c4a6e', marginTop: '10px' }}>{attempt.studentName}</p>
+                <p style={{ fontSize: '24px', fontWeight: '1000', color: '#0c4a6e', marginTop: '10px' }}>{attempt.studentName}</p>
               </div>
 
               <div style={{ padding: '25px 10px', backgroundColor: style.bg, borderRadius: '25px', textAlign: 'center', border: `4px solid ${style.color}`, boxShadow: '0 10px 20px -5px rgba(0,0,0,0.1)' }}>
@@ -124,7 +128,7 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
 
               <div style={{ padding: '25px 10px', backgroundColor: '#f0fdf4', borderRadius: '25px', textAlign: 'center', border: '2px solid #bbf7d0' }}>
                 <span style={{ fontSize: '12px', fontWeight: '900', color: '#15803d', textTransform: 'uppercase' }}>Score</span>
-                <p style={{ fontSize: '26px', fontWeight: '1000', color: '#14532d', marginTop: '10px' }}>{attempt.score}/{totalPossibleMarks}</p>
+                <p style={{ fontSize: '24px', fontWeight: '1000', color: '#14532d', marginTop: '10px' }}>{attempt.score}/{totalPossibleMarks}</p>
               </div>
             </div>
 
@@ -135,21 +139,19 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
               <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
                 {quiz.questions.map((q: any, idx: number) => {
                   const userAns = String((attempt.answers as any)?.[q.id] || '').trim();
-                  const correctAns = String(q.answer || q.correctAnswer || q.options?.[0] || '').trim();
+                  const correctAns = String(q.answer || q.correctAnswer || '').trim();
                   const isCorrect = userAns.toLowerCase() === correctAns.toLowerCase() && userAns !== "";
                   
-                  // Gap Fill চেক করার লজিক: যদি অপশন না থাকে অথবা অপশন লিস্টে সঠিক উত্তরটিই শুধু থাকে
-                  const isGapFill = !q.options || q.options.length === 0 || (q.options.length === 1 && q.options[0] === q.answer);
+                  const isGapFill = !q.options || q.options.length <= 1;
 
                   return (
                     <div key={idx} style={{ padding: '30px', borderRadius: '30px', backgroundColor: isCorrect ? '#f0fdf4' : '#fff1f2', border: '2px solid', borderColor: isCorrect ? '#dcfce7' : '#fecdd3', pageBreakInside: 'avoid' }}>
-                      <p style={{ fontSize: '22px', fontWeight: '900', color: '#1e293b', margin: '0 0 20px 0', lineHeight: '1.5' }}>
+                      <p style={{ fontSize: '20px', fontWeight: '900', color: '#1e293b', margin: '0 0 20px 0', lineHeight: '1.5' }}>
                         <span style={{ color: isCorrect ? '#16a34a' : '#e11d48', marginRight: '10px' }}>{idx + 1}.</span> 
                         {q.text || q.questionText}
                       </p>
                       
                       {isGapFill ? (
-                        /* --- Gap Fill / Short Answer UI --- */
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                           <div style={{ 
                             padding: '15px 20px', 
@@ -158,7 +160,7 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
                             border: '3px dashed', 
                             borderColor: isCorrect ? '#16a34a' : '#e11d48',
                             color: isCorrect ? '#15803d' : '#e11d48',
-                            fontSize: '20px',
+                            fontSize: '18px',
                             fontWeight: '800'
                           }}>
                             <span style={{ fontSize: '12px', textTransform: 'uppercase', display: 'block', opacity: 0.6, marginBottom: '5px' }}>Your Answer:</span>
@@ -172,7 +174,6 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
                           )}
                         </div>
                       ) : (
-                        /* --- MCQ Options UI --- */
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                           {(q.options || []).map((opt: string, oIdx: number) => {
                             const isSelected = userAns === opt.trim();
@@ -187,7 +188,7 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
                             else if (isRight) { optBg = '#f0fdf4'; optBorder = '#22c55e'; optColor = '#15803d'; }
 
                             return (
-                              <div key={oIdx} style={{ padding: '15px 20px', borderRadius: '15px', fontSize: '18px', fontWeight: '800', border: '2px solid', borderColor: optBorder, backgroundColor: optBg, color: optColor, display: 'flex', alignItems: 'center' }}>
+                              <div key={oIdx} style={{ padding: '15px 20px', borderRadius: '15px', fontSize: '16px', fontWeight: '800', border: '2px solid', borderColor: optBorder, backgroundColor: optBg, color: optColor, display: 'flex', alignItems: 'center' }}>
                                 <span style={{ opacity: 0.5, marginRight: '10px', fontSize: '14px' }}>{String.fromCharCode(65 + oIdx)}.</span> {opt}
                               </div>
                             );
@@ -203,7 +204,7 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
             {/* Footer */}
             <div style={{ marginTop: '40px', borderTop: '5px solid #f1f5f9', paddingTop: '40px' }}>
               <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-                <p style={{ fontSize: '18px', fontWeight: '800', color: '#64748b', fontStyle: 'italic' }}>"{randomQuote.text}"</p>
+                <p style={{ fontSize: '16px', fontWeight: '800', color: '#64748b', fontStyle: 'italic' }}>"{randomQuote.text}"</p>
                 <p style={{ fontSize: '14px', fontWeight: '1000', color: '#2563eb', marginTop: '10px' }}>— {randomQuote.author}</p>
               </div>
 
@@ -211,7 +212,7 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                   <div style={{ width: '45px', height: '45px', background: '#2563eb', borderRadius: '12px', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '1000', fontSize: '24px' }}>Q</div>
                   <div>
-                    <p style={{ margin: 0, fontSize: '22px', fontWeight: '1000' }}>EDUQUIZ <span style={{ color: '#2563eb' }}>PRO</span></p>
+                    <p style={{ margin: 0, fontSize: '20px', fontWeight: '1000', color: 'black' }}>EDUQUIZ <span style={{ color: '#2563eb' }}>PRO</span></p>
                     <p style={{ margin: 0, fontSize: '10px', color: '#94a3b8', fontWeight: '900', letterSpacing: '2px' }}>SMART ASSESSMENT SYSTEM</p>
                   </div>
                 </div>
