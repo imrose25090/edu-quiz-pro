@@ -52,7 +52,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setState(p => ({ ...p, loading: true }));
 
     const unsubscribers = [
-      // ১. ক্লাস লিস্ট রিড করা (সিরিয়াল ঠিক রাখতে orderBy ব্যবহার করা হয়েছে)
+      // ১. ক্লাস লিস্ট রিড করা
       onSnapshot(query(collection(db, "classes"), orderBy("createdAt", "asc")), (s) => 
         setState(p => ({ ...p, classes: s.docs.map(d => ({ id: d.id, ...d.data() } as Class)) }))),
       
@@ -81,7 +81,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const t = (key: keyof typeof translations['en']) => translations[state.language][key] || key;
 
-  // --- ম্যানেজমেন্ট ফাংশনসমূহ (সঠিক ক্রম বজায় রাখার জন্য i * 100 মিলি-সেকেন্ড গ্যাপ যোগ করা হয়েছে) ---
+  // --- ম্যানেজমেন্ট ফাংশনসমূহ ---
   
   const bulkAddClasses = async (names: string[]) => {
     const batch = writeBatch(db);
@@ -89,7 +89,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     names.forEach((name, i) => {
       if (name.trim()) {
         const docRef = doc(collection(db, "classes"));
-        // i * 100 যোগ করা হয়েছে যাতে ফায়ারবেসে সিরিয়াল উল্টোপাল্টা না হয়
         batch.set(docRef, { 
           name: name.trim(), 
           createdAt: Timestamp.fromMillis(now + (i * 100)) 
@@ -140,11 +139,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await batch.commit();
   };
 
+  // ✅ টিচার অ্যাড করার সময় allowedClasses ডিফল্ট খালি অ্যারে রাখা হয়েছে
   const bulkAddTeachers = async (data: any[]) => {
     const batch = writeBatch(db);
     data.forEach(teacher => {
       const docRef = doc(collection(db, "teachers"));
-      batch.set(docRef, { ...teacher, createdAt: serverTimestamp() });
+      batch.set(docRef, { 
+        ...teacher, 
+        allowedClasses: teacher.allowedClasses || [], // Ensuring array exists
+        createdAt: serverTimestamp() 
+      });
     });
     await batch.commit();
   };
