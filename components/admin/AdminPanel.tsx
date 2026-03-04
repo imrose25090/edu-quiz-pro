@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useApp } from "../../store"; 
 
-// সাব-কম্পোনেন্ট ইমপোর্ট (ডিফল্ট ইমপোর্ট হিসেবে)
+// সাব-কম্পোনেন্ট ইমপোর্ট
 import AdminTabs from './AdminTabs';
-import { ClassManager } from './ClassManager'; // যদি এটি Named Export হয় তবে {} থাকবে
+import { ClassManager } from './ClassManager'; 
 import SubjectManager from './SubjectManager'; 
 import ChapterManager from './ChapterManager';
 import QuestionManager from './QuestionManager';
@@ -21,6 +21,16 @@ const AdminPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const [selectedSubjectId, setSelectedSubjectId] = useState('');
   const [editingChapterPassage, setEditingChapterPassage] = useState<string | null>(null);
   const [passageInput, setPassageInput] = useState('');
+
+  // ✅ ক্লাসগুলোকে তাদের রেজিস্ট্রেশন অর্ডার (ID বা Serial) অনুযায়ী সাজানো
+  // এতে ড্রপডাউনগুলোতে "যেটা আগে অ্যাড হয়েছে সেটা আগে দেখাবে"
+  const orderedClasses = useMemo(() => {
+    return [...store.classes].sort((a, b) => {
+      const idA = a.id || '';
+      const idB = b.id || '';
+      return idA.localeCompare(idB, undefined, { numeric: true });
+    });
+  }, [store.classes]);
 
   const tabs = [
     { id: 'CLASSES', label: 'Classes', icon: '🏫' },
@@ -66,7 +76,7 @@ const AdminPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           
           {activeTab === 'CLASSES' && (
             <ClassManager 
-              classes={store.classes} 
+              classes={orderedClasses} 
               bulkAdd={store.bulkAddClasses} 
               deleteItem={store.deleteClass} 
               bulkDelete={store.bulkDelete} 
@@ -75,7 +85,7 @@ const AdminPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           
           {activeTab === 'SUBJECTS' && (
             <SubjectManager 
-              classes={store.classes} 
+              classes={orderedClasses} 
               subjects={store.subjects} 
               selectedClassId={selectedClassId} 
               setSelectedClassId={setSelectedClassId} 
@@ -87,7 +97,7 @@ const AdminPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           
           {activeTab === 'CHAPTERS' && (
             <ChapterManager 
-              classes={store.classes} 
+              classes={orderedClasses} 
               subjects={store.subjects} 
               chapters={store.chapters} 
               selectedClassId={selectedClassId} 
@@ -104,7 +114,7 @@ const AdminPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           
           {activeTab === 'QUESTIONS' && (
             <QuestionManager 
-              classes={store.classes} 
+              classes={orderedClasses} 
               subjects={store.subjects} 
               chapters={store.chapters} 
               questions={store.questions} 
@@ -129,7 +139,7 @@ const AdminPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             <MasterRegistry 
               activeTab={activeTab} 
               setActiveTab={setActiveTab} 
-              classes={store.classes} 
+              classes={orderedClasses} 
               subjects={store.subjects} 
               chapters={store.chapters} 
               questions={store.questions} 
