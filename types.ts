@@ -1,12 +1,12 @@
 export type Language = 'en' | 'bn';
 
-// ✅ সংশোধিত: এখানে নতুন টাইপগুলো যোগ করা হয়েছে
+// ✅ সংশোধিত: এখানে নতুন টাইপগুলো যোগ করা হয়েছে
 export enum QuestionType {
   MCQ = 'MCQ',
   TRUE_FALSE = 'TRUE_FALSE',
   SHORT_ANSWER = 'SHORT_ANSWER',
-  FILL_IN_THE_GAP = 'FILL_IN_THE_GAP', // নতুন যোগ করা হলো
-  LONG_ANSWER = 'LONG_ANSWER'         // ভবিষ্যতের জন্য যোগ করা হলো
+  FILL_IN_THE_GAP = 'FILL_IN_THE_GAP', 
+  LONG_ANSWER = 'LONG_ANSWER'
 }
 
 export enum UserRole {
@@ -41,10 +41,10 @@ export interface Chapter {
 // --- Question Bank ---
 export interface Question {
   id: string;
-  text: string;     // Store এ আমরা 'text' ব্যবহার করছি
-  type: string;     // Enum এর বদলে string রাখা নিরাপদ যাতে ডাইনামিক টাইপ সাপোর্ট করে
+  text: string;     
+  type: string;     
   options?: string[];
-  correctAnswer: string; // 'answer' এর বদলে 'correctAnswer' ই স্ট্যান্ডার্ড
+  answer: string;      // ✅ store এর সাথে মিল রেখে 'answer' রাখা হলো
   marks: number; 
   classId: string;
   subjectId: string;
@@ -58,6 +58,9 @@ export interface Teacher {
   name: string;
   email: string;
   pin: string;
+  validityDays?: number; // ✅ যোগ করা হলো (Validity tracking এর জন্য)
+  expiryDate?: string;   // ✅ যোগ করা হলো (ISO string)
+  allowedClasses: string[]; // ✅ নতুন ফিচারের জন্য যোগ করা হলো (Array of Class IDs)
   isFrozen?: boolean;
   createdAt: any;
 }
@@ -129,6 +132,7 @@ export interface AppState {
   addQuizAttempt: (quizCode: string, attempt: any) => Promise<void>;
   updateChapter: (id: string, updates: Partial<Chapter>) => Promise<void>;
   addTeacher: (teacher: any) => Promise<void>;
+  bulkAddTeachers: (data: any[]) => Promise<void>; // ✅ মিসিং অ্যাকশন যোগ করা হয়েছে
   updateTeacher: (id: string, updates: Partial<Teacher>) => Promise<void>;
   deleteTeacher: (id: string) => Promise<void>;
   updateStudent: (id: string, updates: any) => Promise<void>;
