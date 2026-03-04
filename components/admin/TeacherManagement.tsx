@@ -1,20 +1,24 @@
 import React, { useState } from 'react';
-import { Teacher } from '../../types';
+import { Teacher, Class } from '../../types'; // Class টাইপ ইম্পোর্ট করতে হবে
+import { useApp } from '../../store'; // ক্লাস লিস্ট পাওয়ার জন্য
 
 interface TeacherManagementProps {
   teachers: Teacher[];
   bulkAddTeachers: (data: any[]) => void;
   updateTeacher: (id: string, data: any) => void;
   deleteTeacher: (id: string) => void;
-  // ✅ নতুন ফিল্টার ফাংশন (AdminPanel থেকে পাস করতে হবে)
   onTeacherSelect?: (teacherId: string) => void;
 }
 
 export const TeacherManagement: React.FC<TeacherManagementProps> = ({
   teachers, bulkAddTeachers, updateTeacher, deleteTeacher, onTeacherSelect
 }) => {
+  const { classes } = useApp(); // স্টোর থেকে সব ক্লাস নেওয়া হলো
   const [localInputText, setLocalInputText] = useState('');
   const [defaultDays, setDefaultDays] = useState('30'); 
+  
+  // ✅ পারমিশন মোডালের জন্য স্টেট
+  const [permissionModalTeacher, setPermissionModalTeacher] = useState<Teacher | null>(null);
 
   const generateSecurePin = () => {
     const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -47,6 +51,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({
         validityDays: validityDays,
         expiryDate: expiryDate.toISOString(),
         subjects: [],
+        allowedClasses: [], // ✅ ডিফল্টভাবে খালি থাকবে
         createdAt: new Date().toISOString()
       };
     });
@@ -66,8 +71,23 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({
     });
   };
 
+  // ✅ পারমিশন টগল ফাংশন
+  const toggleClassPermission = (teacherId: string, classId: string, currentPermissions: string[]) => {
+    let updatedPermissions;
+    if (currentPermissions.includes(classId)) {
+      updatedPermissions = currentPermissions.filter(id => id !== classId);
+    } else {
+      updatedPermissions = [...currentPermissions, classId];
+    }
+    updateTeacher(teacherId, { allowedClasses: updatedPermissions });
+    // মোডাল স্টেট আপডেট যাতে UI সাথে সাথে চেঞ্জ হয়
+    if (permissionModalTeacher) {
+      setPermissionModalTeacher({ ...permissionModalTeacher, allowedClasses: updatedPermissions });
+    }
+  };
+
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 font-['Hind_Siliguri']">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 font-['Hind_Siliguri'] relative">
       
       {/* 1. Add Teacher Section */}
       <div className="bg-white p-6 md:p-8 rounded-[35px] md:rounded-[40px] border border-slate-200 shadow-sm">
@@ -122,13 +142,11 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({
               return (
                 <div 
                   key={tchr.id} 
-                  // ✅ ক্লিক করলে কুইজ ফিল্টার হবে
-                  onClick={() => onTeacherSelect?.(tchr.id)}
-                  className={`p-5 bg-white border rounded-[26px] flex flex-col lg:flex-row items-center justify-between group transition-all cursor-pointer ${
+                  className={`p-5 bg-white border rounded-[26px] flex flex-col lg:flex-row items-center justify-between group transition-all ${
                     isExpired ? 'border-red-100 bg-red-50/10' : 'border-slate-100 hover:border-indigo-400 hover:shadow-md'
                   }`}
                 >
-                  <div className="flex items-center space-x-5 w-full lg:w-auto mb-4 lg:mb-0">
+                  <div className="flex items-center space-x-5 w-full lg:w-auto mb-4 lg:mb-0 cursor-pointer" onClick={() => onTeacherSelect?.(tchr.id)}>
                     <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-xl shadow-sm transition-colors ${
                       isExpired ? 'bg-red-100 text-red-500' : 'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white'
                     }`}>
@@ -137,9 +155,10 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({
                     <div>
                       <div className="font-black text-slate-800 text-lg leading-tight uppercase">{tchr.name}</div>
                       <div className="text-[11px] font-bold text-slate-400 lowercase">{tchr.email}</div>
-                      {/* Badge for filtering info */}
-                      <div className="mt-1 inline-block px-2 py-0.5 bg-slate-100 text-[8px] font-black text-slate-500 rounded uppercase">
-                        Click to view activity
+                      <div className="flex gap-1 mt-1">
+                         <span className="px-2 py-0.5 bg-slate-100 text-[8px] font-black text-slate-500 rounded uppercase">
+                          {tchr.allowedClasses?.length || 0} Classes Allowed
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -151,7 +170,6 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({
                       <div className="flex items-center gap-2">
                          <input 
                           type="number"
-                          onClick={(e) => e.stopPropagation()} // ইনপুটে ক্লিক করলে যাতে ফিল্টার ট্রিগার না হয়
                           className={`w-14 text-center font-black rounded-lg py-1 text-xs border-none focus:ring-2 focus:ring-indigo-400 ${
                             isExpired ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'
                           }`}
@@ -168,7 +186,6 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({
                     <div className="text-center md:text-right min-w-[100px]">
                       <span className="text-[9px] font-black text-slate-300 uppercase block mb-1">Login PIN</span>
                       <input 
-                        onClick={(e) => e.stopPropagation()}
                         className="w-20 text-center font-mono font-black text-indigo-600 bg-slate-50 border-none rounded-lg py-1 text-xs focus:ring-2 focus:ring-indigo-400"
                         value={tchr.pin || ''}
                         onChange={(e) => updateTeacher(tchr.id, { pin: e.target.value.toUpperCase() })}
@@ -177,15 +194,23 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({
 
                     {/* Actions */}
                     <div className="flex gap-2">
+                      {/* ✅ ক্লাস পারমিশন বাটন */}
                       <button 
-                        onClick={(e) => { e.stopPropagation(); updateTeacher(tchr.id, { pin: generateSecurePin() }); }} 
+                        onClick={() => setPermissionModalTeacher(tchr)}
+                        className="w-10 h-10 flex items-center justify-center bg-indigo-50 text-indigo-400 rounded-xl hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
+                        title="Set Permissions"
+                      >
+                        🔑
+                      </button>
+                      <button 
+                        onClick={() => updateTeacher(tchr.id, { pin: generateSecurePin() })} 
                         className="w-10 h-10 flex items-center justify-center bg-slate-50 text-slate-400 rounded-xl hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
                         title="Reset PIN"
                       >
                         🔄
                       </button>
                       <button 
-                        onClick={(e) => { e.stopPropagation(); if(window.confirm(`Remove ${tchr.name}?`)) deleteTeacher(tchr.id); }} 
+                        onClick={() => { if(window.confirm(`Remove ${tchr.name}?`)) deleteTeacher(tchr.id); }} 
                         className="w-10 h-10 flex items-center justify-center bg-rose-50 text-rose-300 hover:bg-rose-500 hover:text-white rounded-xl transition-all shadow-sm"
                         title="Delete Teacher"
                       >
@@ -204,13 +229,59 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({
           )}
         </div>
       </div>
+
+      {/* ✅ ক্লাস পারমিশন মোডাল */}
+      {permissionModalTeacher && (
+        <div className="fixed inset-0 z-[110] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-[35px] shadow-2xl overflow-hidden animate-in zoom-in duration-300 border border-white">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <div>
+                <h4 className="font-black text-slate-800 uppercase tracking-tighter">Set Access Permissions</h4>
+                <p className="text-[10px] font-bold text-indigo-500 uppercase">{permissionModalTeacher.name}</p>
+              </div>
+              <button onClick={() => setPermissionModalTeacher(null)} className="text-slate-400 hover:text-rose-500 transition-colors font-bold">CLOSE</button>
+            </div>
+            
+            <div className="p-6 max-h-96 overflow-y-auto custom-scrollbar">
+              <div className="grid gap-3">
+                {classes.map(cls => {
+                  const isAllowed = permissionModalTeacher.allowedClasses?.includes(cls.id);
+                  return (
+                    <div 
+                      key={cls.id}
+                      onClick={() => toggleClassPermission(permissionModalTeacher.id, cls.id, permissionModalTeacher.allowedClasses || [])}
+                      className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between ${
+                        isAllowed ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-100 bg-slate-50 text-slate-400'
+                      }`}
+                    >
+                      <span className="font-bold">{cls.name}</span>
+                      <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${isAllowed ? 'bg-indigo-500 border-indigo-500 text-white' : 'bg-white border-slate-200'}`}>
+                        {isAllowed && <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            
+            <div className="p-4 bg-slate-50 text-center">
+              <button 
+                onClick={() => setPermissionModalTeacher(null)}
+                className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black text-sm hover:bg-indigo-600 transition-all"
+              >
+                DONE
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Footer Instructions */}
       <div className="bg-indigo-900 p-6 rounded-[30px] text-indigo-100 flex items-center gap-5">
         <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center text-xl">💡</div>
         <div className="text-xs font-medium leading-relaxed">
           <span className="font-black uppercase block mb-1 text-indigo-300">Admin Tip:</span>
-          To manage specific questions or quizzes created by a teacher, simply <span className="text-white font-bold underline">click on their name</span> above. The registry will auto-filter their content.
+          Click the <span className="bg-white/20 px-1.5 rounded">🔑</span> icon to select which classes this teacher can access. Teachers will only see questions and create quizzes for their allowed classes.
         </div>
       </div>
     </div>
