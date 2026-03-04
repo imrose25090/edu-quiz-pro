@@ -44,22 +44,47 @@ export const QuizCreateForm: React.FC<QuizCreateFormProps> = ({
     return () => window.removeEventListener('storage_updated', loadFormats);
   }, []);
 
-  // ✅ হেল্পার ফাংশন: টাইপ নরমালাইজেশন (স্পেস এবং কেস ফিক্স করার জন্য)
-  const normalizeType = (type: string) => type?.toUpperCase().replace(/\s+/g, '_') || '';
+  // ✅ ১. টাইপ নরমালাইজেশন (স্পেস, আন্ডারস্কোর এবং কেস হ্যান্ডেল করার জন্য)
+  const normalizeType = (type: string) => {
+    if (!type) return '';
+    return type.toString().trim().toUpperCase().replace(/[\s-]+/g, '_');
+  };
 
-  // ২. প্রশ্ন ফিল্টার করার লজিক (উন্নত করা হয়েছে)
+  // ✅ ২. টাইপ অনুযায়ী এভেইলেবল প্রশ্ন গণনা (সংশোধিত)
+  const availableCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    
+    // শুধু সিলেক্টেড সাবজেক্ট এবং চ্যাপ্টারের প্রশ্নগুলো আগে ফিল্টার করি
+    const baseFilteredQuestions = questions.filter(q => {
+      const matchClass = q.classId === newQuiz.classId;
+      const matchSubject = q.subjectId === newQuiz.subjectId;
+      const matchChapter = newQuiz.chapterIds && newQuiz.chapterIds.length > 0 
+        ? newQuiz.chapterIds.includes(q.chapterId) 
+        : true;
+      return matchClass && matchSubject && matchChapter;
+    });
+
+    // এখন প্রতিটি এডমিন ফরমেট টাইপের জন্য কাউন্ট বের করি
+    adminFormats.forEach(f => {
+      const fTypeNormalized = normalizeType(f.type);
+      const matchedQs = baseFilteredQuestions.filter(q => normalizeType(q.type) === fTypeNormalized);
+      counts[f.type] = matchedQs.length;
+    });
+
+    return counts;
+  }, [questions, newQuiz.classId, newQuiz.subjectId, newQuiz.chapterIds, adminFormats]);
+
+  // ✅ ৩. প্রশ্ন ফিল্টার করার লজিক (Manual Select এর জন্য)
   const filteredQuestions = useMemo(() => {
     if (!Array.isArray(questions)) return [];
     
     return questions.filter(q => {
       const matchClass = q.classId === newQuiz.classId;
       const matchSubject = q.subjectId === newQuiz.subjectId;
-      
       const matchChapter = newQuiz.chapterIds && newQuiz.chapterIds.length > 0 
         ? newQuiz.chapterIds.includes(q.chapterId) 
         : true;
       
-      // ✅ এখানে টাইপ চেক করার সময় স্পেস এবং আন্ডারস্কোর নরমালাইজ করা হচ্ছে
       const qTypeNormalized = normalizeType(q.type);
       const activeFilterNormalized = normalizeType(activeTypeFilter);
 
@@ -73,21 +98,6 @@ export const QuizCreateForm: React.FC<QuizCreateFormProps> = ({
     });
   }, [questions, newQuiz.classId, newQuiz.subjectId, newQuiz.chapterIds, activeTypeFilter, adminFormats]);
 
-  // ৩. টাইপ অনুযায়ী এভেইলেবল প্রশ্ন গণনা
-  const availableCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    adminFormats.forEach(f => {
-      const fTypeNormalized = normalizeType(f.type);
-      counts[f.type] = questions.filter(q => 
-        q.classId === newQuiz.classId && 
-        q.subjectId === newQuiz.subjectId && 
-        normalizeType(q.type) === fTypeNormalized &&
-        (newQuiz.chapterIds?.length > 0 ? newQuiz.chapterIds.includes(q.chapterId) : true)
-      ).length;
-    });
-    return counts;
-  }, [questions, newQuiz.classId, newQuiz.subjectId, newQuiz.chapterIds, adminFormats]);
-
   const toggleChapter = (chapterId: string) => {
     const currentIds = newQuiz.chapterIds || [];
     const newIds = currentIds.includes(chapterId)
@@ -100,9 +110,11 @@ export const QuizCreateForm: React.FC<QuizCreateFormProps> = ({
 
   const handleTypeCountChange = (type: string, count: number) => {
     const val = isNaN(count) ? 0 : count;
+    const available = availableCounts[type] || 0;
+    
     const updatedCounts = { 
       ...(newQuiz.typeCounts || {}),
-      [type]: Math.min(val, availableCounts[type] || 0)
+      [type]: Math.max(0, Math.min(val, available)) // ০ থেকে এভেইলেবল রেঞ্জের মধ্যে সীমাবদ্ধ
     };
     
     const totalQ = Object.values(updatedCounts).reduce((a: any, b: any) => a + (Number(b) || 0), 0);
@@ -175,20 +187,24 @@ export const QuizCreateForm: React.FC<QuizCreateFormProps> = ({
           </div>
         )}
 
+        {/* Question Type Filters (Visibility Fix) */}
         {newQuiz.subjectId && adminFormats.length > 0 && (
           <div className="space-y-3 p-6 bg-slate-50 rounded-[32px] border-2 border-slate-100">
             <label className="block text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Filter Question Types</label>
             <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={() => setActiveTypeFilter('ALL')} className={`px-4 py-2 rounded-xl text-[10px] font-bold border-2 transition-all ${activeTypeFilter === 'ALL' ? 'bg-slate-900 border-slate-900 text-white shadow-md' : 'bg-white border-slate-200 text-slate-400'}`}>ALL TYPES</button>
+              <button type="button" onClick={() => setActiveTypeFilter('ALL')} className={`px-4 py-2 rounded-xl text-[10px] font-bold border-2 transition-all ${activeTypeFilter === 'ALL' ? 'bg-slate-900 border-slate-900 text-white shadow-md' : 'bg-white border-slate-200 text-slate-400'}`}>
+                ALL ({Object.values(availableCounts).reduce((a, b) => a + b, 0)})
+              </button>
               {adminFormats.map(f => (
                 <button key={f.id} type="button" onClick={() => setActiveTypeFilter(f.type)} className={`px-4 py-2 rounded-xl text-[10px] font-bold border-2 transition-all ${activeTypeFilter === f.type ? 'bg-indigo-600 border-indigo-600 text-white shadow-md' : 'bg-white border-slate-200 text-slate-400'}`}>
-                  {f.name.toUpperCase()} {f.requiresInput && '✍️'}
+                  {f.name.toUpperCase()} ({availableCounts[f.type] || 0})
                 </button>
               ))}
             </div>
           </div>
         )}
 
+        {/* AUTO MODE Distribution Section */}
         {newQuiz.mode === 'AUTO' && newQuiz.subjectId && (
           <div className="p-8 bg-indigo-50/50 rounded-[32px] border border-indigo-100 space-y-6">
             <h4 className="text-sm font-black text-indigo-900 uppercase tracking-widest">Auto Distribution</h4>
@@ -198,19 +214,27 @@ export const QuizCreateForm: React.FC<QuizCreateFormProps> = ({
                   <div className="flex justify-between items-start mb-3">
                     <label className="block text-[10px] font-black text-slate-400 uppercase">{f.name}</label>
                   </div>
-                  <input type="number" min="0" placeholder={`Max: ${availableCounts[f.type] || 0}`} className="w-full text-xl font-black text-indigo-600 outline-none bg-transparent" value={newQuiz.typeCounts?.[f.type] || ''} onChange={(e) => handleTypeCountChange(f.type, parseInt(e.target.value))} />
-                  <p className="mt-2 text-[9px] font-bold text-slate-400 uppercase">Available: {availableCounts[f.type] || 0}</p>
+                  <input 
+                    type="number" 
+                    min="0" 
+                    placeholder="0" 
+                    className="w-full text-xl font-black text-indigo-600 outline-none bg-transparent" 
+                    value={newQuiz.typeCounts?.[f.type] || ''} 
+                    onChange={(e) => handleTypeCountChange(f.type, parseInt(e.target.value))} 
+                  />
+                  <p className="mt-2 text-[9px] font-bold text-slate-400 uppercase">Available: <span className="text-indigo-600">{availableCounts[f.type] || 0}</span></p>
                 </div>
               ))}
             </div>
           </div>
         )}
 
+        {/* MANUAL MODE List Section */}
         {newQuiz.mode === 'MANUAL' && newQuiz.subjectId && (
           <div className="space-y-4">
             <div className="flex justify-between items-center ml-2">
               <h4 className="text-sm font-black text-slate-600 uppercase tracking-widest">Select Questions ({manualSelectedIds.length})</h4>
-              <p className="text-[10px] font-bold text-slate-400">Showing: {filteredQuestions.length}</p>
+              <p className="text-[10px] font-bold text-slate-400">Total in Filter: {filteredQuestions.length}</p>
             </div>
             <div className="bg-slate-50 p-4 rounded-[32px] border-2 border-dashed border-slate-200 max-h-[450px] overflow-y-auto space-y-3 custom-scrollbar">
               {filteredQuestions.length > 0 ? filteredQuestions.map((q) => (
@@ -224,13 +248,18 @@ export const QuizCreateForm: React.FC<QuizCreateFormProps> = ({
                       <span className={`text-[9px] font-black uppercase px-3 py-1 rounded-lg ${manualSelectedIds.includes(q.id) ? 'bg-indigo-500 text-white' : 'bg-slate-100 text-slate-400'}`}>
                         {q.type}
                       </span>
+                      {q.chapterId && (
+                        <span className={`text-[9px] font-black uppercase px-3 py-1 rounded-lg ${manualSelectedIds.includes(q.id) ? 'bg-indigo-500/50 text-white' : 'bg-indigo-50 text-indigo-400'}`}>
+                          Chapter: {chapters.find(ch => ch.id === q.chapterId)?.name || 'N/A'}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
               )) : (
                 <div className="text-center py-20">
                    <div className="text-4xl mb-4 grayscale opacity-30">🔍</div>
-                   <p className="font-black text-slate-300 uppercase tracking-widest text-xs">No questions found matching your filter</p>
+                   <p className="font-black text-slate-300 uppercase tracking-widest text-xs">No questions found matching your selection</p>
                 </div>
               )}
             </div>
@@ -243,7 +272,7 @@ export const QuizCreateForm: React.FC<QuizCreateFormProps> = ({
             <input type="number" className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-[24px] font-bold outline-none focus:border-indigo-500" value={newQuiz.time || ''} onChange={e => setNewQuiz({...newQuiz, time: parseInt(e.target.value) || 0})} />
           </div>
           <div>
-            <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-2 tracking-widest">Total Questions</label>
+            <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-2 tracking-widest">Total Selected Questions</label>
             <div className="w-full p-5 bg-slate-900 border-2 border-slate-900 rounded-[24px] font-black text-white text-center text-xl shadow-lg transition-all">
               {newQuiz.qCount || 0}
             </div>
