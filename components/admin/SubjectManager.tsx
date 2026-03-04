@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 
-// ইন্টারফেস আপডেট করা হয়েছে bulkDelete সহ
 interface SubjectManagerProps {
   classes: any[];
   subjects: any[];
@@ -8,7 +7,7 @@ interface SubjectManagerProps {
   setSelectedClassId: (id: string) => void;
   addSubject: (subjects: any[]) => void; 
   deleteSubject: (id: string) => void;
-  bulkDelete: (collectionName: string, ids: string[]) => Promise<void>; // ✅ নতুন প্রপস
+  bulkDelete: (collectionName: string, ids: string[]) => Promise<void>;
 }
 
 const SubjectManager: React.FC<SubjectManagerProps> = ({
@@ -21,16 +20,21 @@ const SubjectManager: React.FC<SubjectManagerProps> = ({
   bulkDelete
 }) => {
   const [newSubjects, setNewSubjects] = useState('');
-  const [selectedIds, setSelectedIds] = useState<string[]>([]); // ✅ সিলেক্টেড আইডি রাখার জন্য স্টেট
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  // ১. সাবজেক্ট ফিল্টার এবং সিরিয়াল অনুযায়ী সর্ট করা
+  // ✅ হেল্পার ফাংশন: টাইমস্ট্যাম্পকে সংখ্যায় (Milliseconds) রূপান্তর করার জন্য
+  const getTime = (createdAt: any) => {
+    if (!createdAt) return 0;
+    if (typeof createdAt.toMillis === 'function') return createdAt.toMillis(); // Firebase Timestamp
+    if (createdAt instanceof Date) return createdAt.getTime(); // JS Date
+    if (createdAt.seconds) return createdAt.seconds * 1000; // Manual Timestamp object
+    return 0;
+  };
+
+  // ১. সাবজেক্ট ফিল্টার এবং নির্ভুল সর্টিং (Registration Order)
   const filteredSubjects = subjects
     .filter(s => s.classId === selectedClassId)
-    .sort((a, b) => {
-      const timeA = a.createdAt?.seconds || 0;
-      const timeB = b.createdAt?.seconds || 0;
-      return timeA - timeB;
-    });
+    .sort((a, b) => getTime(a.createdAt) - getTime(b.createdAt));
 
   const handleSave = () => {
     if (!selectedClassId) {
@@ -40,10 +44,11 @@ const SubjectManager: React.FC<SubjectManagerProps> = ({
     const names = newSubjects.split('\n').map(n => n.trim()).filter(n => n !== '');
     if (names.length === 0) return;
 
+    // ✅ এখানে Date() এর পরিবর্তে সরাসরি store এর bulkAdd লজিক ব্যবহার হবে
     const subjectsToUpload = names.map(name => ({
       name,
       classId: selectedClassId,
-      createdAt: new Date()
+      // createdAt এখানে না দিলেও চলে কারণ store.tsx এর bulkAdd ফাংশনে আমরা এটি জেনারেট করছি
     }));
 
     try {
@@ -54,13 +59,12 @@ const SubjectManager: React.FC<SubjectManagerProps> = ({
     }
   };
 
-  // ✅ বাল্ক ডিলিট হ্যান্ডলার
   const handleBulkDelete = async () => {
     if (selectedIds.length === 0) return;
     if (window.confirm(`আপনি কি নিশ্চিত যে আপনি ${selectedIds.length}টি সাবজেক্ট ডিলিট করতে চান?`)) {
       try {
         await bulkDelete('subjects', selectedIds);
-        setSelectedIds([]); // ডিলিট শেষে সিলেকশন খালি করা
+        setSelectedIds([]);
         alert("Selected subjects deleted successfully!");
       } catch (error) {
         console.error("Bulk Delete Error:", error);
@@ -68,7 +72,6 @@ const SubjectManager: React.FC<SubjectManagerProps> = ({
     }
   };
 
-  // ✅ অল সিলেক্ট হ্যান্ডলার
   const toggleSelectAll = () => {
     if (selectedIds.length === filteredSubjects.length) {
       setSelectedIds([]);
@@ -90,12 +93,20 @@ const SubjectManager: React.FC<SubjectManagerProps> = ({
             value={selectedClassId} 
             onChange={(e) => {
               setSelectedClassId(e.target.value);
-              setSelectedIds([]); // ক্লাস চেঞ্জ করলে সিলেকশন ক্লিয়ার হবে
+              setSelectedIds([]);
             }}
-            className="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none ring-1 ring-slate-100 focus:ring-2 focus:ring-indigo-500 transition-all"
+            className="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none ring-1 ring-slate-100 focus:ring-2 focus:ring-indigo-500 transition-all cursor-pointer"
           >
             <option value="">Choose Class...</option>
-            {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            {/* ✅ ক্লাস ড্রপডাউন সর্টিং লজিক ফিক্স করা হয়েছে */}
+            {[...classes]
+              .sort((a, b) => getTime(a.createdAt) - getTime(b.createdAt))
+              .map(c => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))
+            }
           </select>
         </div>
 
@@ -128,7 +139,6 @@ const SubjectManager: React.FC<SubjectManagerProps> = ({
             </span>
           </div>
 
-          {/* ✅ বাল্ক ডিলিট কন্ট্রোলস */}
           {filteredSubjects.length > 0 && (
             <div className="flex justify-between items-center bg-slate-50 p-3 rounded-2xl border border-slate-100">
               <div className="flex items-center gap-2 cursor-pointer" onClick={toggleSelectAll}>
