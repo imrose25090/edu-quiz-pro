@@ -10,7 +10,7 @@ interface ChapterManagerProps {
   setSelectedSubjectId: (id: string) => void;
   bulkAdd: (chapters: { name: string; classId: string; subjectId: string }[]) => void;
   deleteItem: (id: string) => void;
-  bulkDelete: (collectionName: string, ids: string[]) => Promise<void>; // ✅ নতুন প্রপস
+  bulkDelete: (collectionName: string, ids: string[]) => Promise<void>;
   setEditingChapterPassage: (id: string | null) => void;
   setPassageInput: (text: string) => void;
 }
@@ -25,18 +25,35 @@ const ChapterManager: React.FC<ChapterManagerProps> = ({
   setSelectedSubjectId,
   bulkAdd,
   deleteItem,
-  bulkDelete, // ✅ প্রপস রিসিভ করা হয়েছে
+  bulkDelete,
   setEditingChapterPassage,
   setPassageInput
 }) => {
   const [newChapters, setNewChapters] = useState('');
-  const [selectedIds, setSelectedIds] = useState<string[]>([]); // ✅ সিলেক্টেড আইডি ট্র্যাকিং
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  // ফিল্টারিং
-  const filteredSubjects = subjects.filter(s => s.classId === selectedClassId);
-  const filteredChapters = chapters.filter((ch: any) => 
-    ch.classId === selectedClassId && ch.subjectId === selectedSubjectId
-  );
+  // ✅ হেল্পার ফাংশন: টাইমস্ট্যাম্পকে নির্ভুলভাবে সংখ্যায় রূপান্তর করার জন্য
+  const getTime = (createdAt: any) => {
+    if (!createdAt) return 0;
+    if (typeof createdAt.toMillis === 'function') return createdAt.toMillis();
+    if (createdAt instanceof Date) return createdAt.getTime();
+    if (createdAt.seconds) return createdAt.seconds * 1000;
+    return 0;
+  };
+
+  // ১. ড্রপডাউনের জন্য সর্টেড ক্লাস এবং সাবজেক্ট
+  const sortedClasses = [...classes].sort((a, b) => getTime(a.createdAt) - getTime(b.createdAt));
+  
+  const filteredSubjects = subjects
+    .filter(s => s.classId === selectedClassId)
+    .sort((a, b) => getTime(a.createdAt) - getTime(b.createdAt));
+
+  // ২. চ্যাপ্টার লিস্ট সর্টিং (Registration Order)
+  const filteredChapters = chapters
+    .filter((ch: any) => 
+      ch.classId === selectedClassId && ch.subjectId === selectedSubjectId
+    )
+    .sort((a, b) => getTime(a.createdAt) - getTime(b.createdAt));
 
   const handleSave = () => {
     if (!selectedClassId || !selectedSubjectId) {
@@ -57,7 +74,6 @@ const ChapterManager: React.FC<ChapterManagerProps> = ({
     alert('Chapters added successfully!');
   };
 
-  // ✅ বাল্ক ডিলিট ফাংশন
   const handleBulkDelete = async () => {
     if (selectedIds.length === 0) return;
     if (window.confirm(`আপনি কি নিশ্চিত যে ${selectedIds.length}টি চ্যাপ্টার ডিলিট করতে চান?`)) {
@@ -71,7 +87,6 @@ const ChapterManager: React.FC<ChapterManagerProps> = ({
     }
   };
 
-  // ✅ অল সিলেক্ট ফাংশন
   const toggleSelectAll = () => {
     if (selectedIds.length === filteredChapters.length && filteredChapters.length > 0) {
       setSelectedIds([]);
@@ -95,12 +110,12 @@ const ChapterManager: React.FC<ChapterManagerProps> = ({
               onChange={(e) => {
                 setSelectedClassId(e.target.value);
                 setSelectedSubjectId('');
-                setSelectedIds([]); // ক্লিয়ার সিলেকশন
+                setSelectedIds([]);
               }}
-              className="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none ring-1 ring-slate-100 focus:ring-2 focus:ring-indigo-500"
+              className="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none ring-1 ring-slate-100 focus:ring-2 focus:ring-indigo-500 cursor-pointer"
             >
               <option value="">Choose Class...</option>
-              {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {sortedClasses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
 
@@ -110,10 +125,10 @@ const ChapterManager: React.FC<ChapterManagerProps> = ({
               value={selectedSubjectId} 
               onChange={(e) => {
                 setSelectedSubjectId(e.target.value);
-                setSelectedIds([]); // ক্লিয়ার সিলেকশন
+                setSelectedIds([]);
               }}
               disabled={!selectedClassId}
-              className="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none ring-1 ring-slate-100 focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+              className="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none ring-1 ring-slate-100 focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 cursor-pointer"
             >
               <option value="">Choose Subject...</option>
               {filteredSubjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -147,7 +162,6 @@ const ChapterManager: React.FC<ChapterManagerProps> = ({
             </span>
           </div>
 
-          {/* ✅ বাল্ক কন্ট্রোল UI */}
           {filteredChapters.length > 0 && (
             <div className="flex justify-between items-center bg-slate-50 p-3 rounded-2xl border border-slate-100">
               <div className="flex items-center gap-2 cursor-pointer" onClick={toggleSelectAll}>
@@ -163,7 +177,7 @@ const ChapterManager: React.FC<ChapterManagerProps> = ({
               {selectedIds.length > 0 && (
                 <button 
                   onClick={handleBulkDelete}
-                  className="bg-rose-500 hover:bg-rose-600 text-white px-4 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all shadow-lg"
+                  className="bg-rose-500 hover:bg-rose-600 text-white px-4 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all shadow-lg shadow-rose-100"
                 >
                   Delete ({selectedIds.length})
                 </button>
@@ -175,7 +189,7 @@ const ChapterManager: React.FC<ChapterManagerProps> = ({
         <div className="space-y-3 max-h-[480px] overflow-y-auto pr-2 custom-scrollbar">
           {selectedSubjectId ? (
             filteredChapters.length > 0 ? (
-              filteredChapters.map((ch: any) => {
+              filteredChapters.map((ch: any, index: number) => {
                 const isSelected = selectedIds.includes(ch.id);
                 return (
                   <div 
@@ -197,6 +211,7 @@ const ChapterManager: React.FC<ChapterManagerProps> = ({
                       />
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
+                          <span className="text-[9px] font-black text-indigo-400 uppercase tracking-tighter">CH-0{index + 1}</span>
                           <span className="font-bold text-slate-700">{ch.name}</span>
                           {ch.passageContent && (
                             <span className="bg-emerald-100 text-emerald-600 text-[8px] font-black px-2 py-0.5 rounded uppercase">Passage OK</span>
@@ -226,10 +241,10 @@ const ChapterManager: React.FC<ChapterManagerProps> = ({
                 );
               })
             ) : (
-              <div className="text-center py-20 opacity-20 italic">No chapters found for this subject</div>
+              <div className="text-center py-20 opacity-20 italic font-bold">No chapters found for this subject</div>
             )
           ) : (
-            <div className="text-center py-20 opacity-20 italic">Please select a class and subject first</div>
+            <div className="text-center py-20 opacity-20 italic font-bold">Please select a class and subject first</div>
           )}
         </div>
       </div>
