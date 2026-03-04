@@ -20,41 +20,39 @@ export const QuizCreateForm: React.FC<QuizCreateFormProps> = ({
   manualSelectedIds, setManualSelectedIds, aiLoading, onSubmit, onCancel
 }) => {
   
-  const [adminFormats, setAdminFormats] = useState<any[]>([]);
   const [activeTypeFilter, setActiveTypeFilter] = useState<string>('ALL');
 
-  useEffect(() => {
-    const loadFormats = () => {
-      const saved = localStorage.getItem('quiz_formats');
-      if (saved) {
-        setAdminFormats(JSON.parse(saved));
-      } else {
-        const defaultFormats = [
-          { id: '1', type: 'MCQ', name: 'Standard MCQ', requiresInput: false },
-          { id: '2', type: 'TRUE_FALSE', name: 'True/False', requiresInput: false },
-          { id: '3', type: 'SHORT_ANSWER', name: 'Short Answer', requiresInput: true },
-          { id: '4', type: 'FILL_IN_THE_GAP', name: 'Fill In The Gap', requiresInput: true }
-        ];
-        setAdminFormats(defaultFormats);
-      }
-    };
-    loadFormats();
-
-    window.addEventListener('storage_updated', loadFormats);
-    return () => window.removeEventListener('storage_updated', loadFormats);
-  }, []);
-
-  // ✅ ১. টাইপ নরমালাইজেশন (স্পেস, আন্ডারস্কোর এবং কেস হ্যান্ডেল করার জন্য)
+  // ✅ ১. টাইপ নরমালাইজেশন
   const normalizeType = (type: string) => {
     if (!type) return '';
     return type.toString().trim().toUpperCase().replace(/[\s-]+/g, '_');
   };
 
-  // ✅ ২. টাইপ অনুযায়ী এভেইলেবল প্রশ্ন গণনা (সংশোধিত)
+  // ✅ ২. ডায়নামিক ফরম্যাট জেনারেশন (লোকালহোস্টের মতো করার মূল চাবিকাঠি)
+  // এটি সরাসরি কোশ্চেন ডাটা থেকে টাইপগুলো খুঁজে বের করবে
+  const dynamicFormats = useMemo(() => {
+    if (!questions || questions.length === 0) return [];
+    
+    // বর্তমান সিলেক্টেড ক্লাস ও সাবজেক্টের কোশ্চেনগুলো ফিল্টার করি
+    const relevantQs = questions.filter(q => 
+      q.classId === newQuiz.classId && 
+      q.subjectId === newQuiz.subjectId
+    );
+
+    // ইউনিক টাইপগুলো বের করি (যেমন: MCQ, TRUE_FALSE)
+    const uniqueTypes = Array.from(new Set(relevantQs.map(q => normalizeType(q.type))));
+    
+    return uniqueTypes.map((type, index) => ({
+      id: index.toString(),
+      type: type,
+      name: type.replace(/_/g, ' ') // আন্ডারস্কোর সরিয়ে স্পেস দেওয়া (যেমন: TRUE_FALSE -> TRUE FALSE)
+    }));
+  }, [questions, newQuiz.classId, newQuiz.subjectId]);
+
+  // ✅ ৩. টাইপ অনুযায়ী এভেইলেবল প্রশ্ন গণনা
   const availableCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     
-    // শুধু সিলেক্টেড সাবজেক্ট এবং চ্যাপ্টারের প্রশ্নগুলো আগে ফিল্টার করি
     const baseFilteredQuestions = questions.filter(q => {
       const matchClass = q.classId === newQuiz.classId;
       const matchSubject = q.subjectId === newQuiz.subjectId;
@@ -64,17 +62,16 @@ export const QuizCreateForm: React.FC<QuizCreateFormProps> = ({
       return matchClass && matchSubject && matchChapter;
     });
 
-    // এখন প্রতিটি এডমিন ফরমেট টাইপের জন্য কাউন্ট বের করি
-    adminFormats.forEach(f => {
+    dynamicFormats.forEach(f => {
       const fTypeNormalized = normalizeType(f.type);
       const matchedQs = baseFilteredQuestions.filter(q => normalizeType(q.type) === fTypeNormalized);
       counts[f.type] = matchedQs.length;
     });
 
     return counts;
-  }, [questions, newQuiz.classId, newQuiz.subjectId, newQuiz.chapterIds, adminFormats]);
+  }, [questions, newQuiz.classId, newQuiz.subjectId, newQuiz.chapterIds, dynamicFormats]);
 
-  // ✅ ৩. প্রশ্ন ফিল্টার করার লজিক (Manual Select এর জন্য)
+  // ✅ ৪. প্রশ্ন ফিল্টার করার লজিক (Manual Select এর জন্য)
   const filteredQuestions = useMemo(() => {
     if (!Array.isArray(questions)) return [];
     
@@ -87,16 +84,14 @@ export const QuizCreateForm: React.FC<QuizCreateFormProps> = ({
       
       const qTypeNormalized = normalizeType(q.type);
       const activeFilterNormalized = normalizeType(activeTypeFilter);
-
-      const isAdminType = adminFormats.some(f => normalizeType(f.type) === qTypeNormalized);
       
       const matchType = activeFilterNormalized === 'ALL' 
-        ? isAdminType 
+        ? true 
         : qTypeNormalized === activeFilterNormalized;
         
       return matchClass && matchSubject && matchChapter && matchType;
     });
-  }, [questions, newQuiz.classId, newQuiz.subjectId, newQuiz.chapterIds, activeTypeFilter, adminFormats]);
+  }, [questions, newQuiz.classId, newQuiz.subjectId, newQuiz.chapterIds, activeTypeFilter]);
 
   const toggleChapter = (chapterId: string) => {
     const currentIds = newQuiz.chapterIds || [];
@@ -114,7 +109,7 @@ export const QuizCreateForm: React.FC<QuizCreateFormProps> = ({
     
     const updatedCounts = { 
       ...(newQuiz.typeCounts || {}),
-      [type]: Math.max(0, Math.min(val, available)) // ০ থেকে এভেইলেবল রেঞ্জের মধ্যে সীমাবদ্ধ
+      [type]: Math.max(0, Math.min(val, available))
     };
     
     const totalQ = Object.values(updatedCounts).reduce((a: any, b: any) => a + (Number(b) || 0), 0);
@@ -187,15 +182,15 @@ export const QuizCreateForm: React.FC<QuizCreateFormProps> = ({
           </div>
         )}
 
-        {/* Question Type Filters (Visibility Fix) */}
-        {newQuiz.subjectId && adminFormats.length > 0 && (
+        {/* ✅ Dynamic Question Type Filters (Visibility Fix) */}
+        {newQuiz.subjectId && dynamicFormats.length > 0 && (
           <div className="space-y-3 p-6 bg-slate-50 rounded-[32px] border-2 border-slate-100">
             <label className="block text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Filter Question Types</label>
             <div className="flex flex-wrap gap-2">
               <button type="button" onClick={() => setActiveTypeFilter('ALL')} className={`px-4 py-2 rounded-xl text-[10px] font-bold border-2 transition-all ${activeTypeFilter === 'ALL' ? 'bg-slate-900 border-slate-900 text-white shadow-md' : 'bg-white border-slate-200 text-slate-400'}`}>
                 ALL ({Object.values(availableCounts).reduce((a, b) => a + b, 0)})
               </button>
-              {adminFormats.map(f => (
+              {dynamicFormats.map(f => (
                 <button key={f.id} type="button" onClick={() => setActiveTypeFilter(f.type)} className={`px-4 py-2 rounded-xl text-[10px] font-bold border-2 transition-all ${activeTypeFilter === f.type ? 'bg-indigo-600 border-indigo-600 text-white shadow-md' : 'bg-white border-slate-200 text-slate-400'}`}>
                   {f.name.toUpperCase()} ({availableCounts[f.type] || 0})
                 </button>
@@ -209,7 +204,7 @@ export const QuizCreateForm: React.FC<QuizCreateFormProps> = ({
           <div className="p-8 bg-indigo-50/50 rounded-[32px] border border-indigo-100 space-y-6">
             <h4 className="text-sm font-black text-indigo-900 uppercase tracking-widest">Auto Distribution</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {adminFormats.map((f) => (
+              {dynamicFormats.map((f) => (
                 <div key={`auto-${f.id}`} className="bg-white p-5 rounded-2xl border border-indigo-100 shadow-sm transition-all hover:shadow-md">
                   <div className="flex justify-between items-start mb-3">
                     <label className="block text-[10px] font-black text-slate-400 uppercase">{f.name}</label>
