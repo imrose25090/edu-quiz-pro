@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useApp } from '../store';
 import { QuestionType } from '../types';
@@ -24,7 +23,8 @@ const QuestionBank: React.FC<QuestionBankProps> = ({ onBack }) => {
   });
 
   return (
-    <div className="space-y-8 max-w-6xl mx-auto pb-20 animate-in fade-in duration-500">
+    <div className="space-y-8 max-w-6xl mx-auto pb-20 animate-in fade-in duration-500 font-['Hind_Siliguri']">
+      {/* Header Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-white p-8 rounded-[32px] shadow-sm border border-slate-200">
         <div>
           <button 
@@ -55,6 +55,7 @@ const QuestionBank: React.FC<QuestionBankProps> = ({ onBack }) => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Filters Sidebar */}
         <div className="space-y-6">
           <div className="bg-white p-8 rounded-[32px] border border-slate-200 shadow-sm space-y-6">
             <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">{t('list')} Filters</h3>
@@ -101,6 +102,7 @@ const QuestionBank: React.FC<QuestionBankProps> = ({ onBack }) => {
           </div>
         </div>
 
+        {/* Questions List */}
         <div className="md:col-span-2 space-y-6">
           {filteredQuestions.length > 0 ? (
             <div className="grid grid-cols-1 gap-4">
@@ -129,18 +131,18 @@ const QuestionBank: React.FC<QuestionBankProps> = ({ onBack }) => {
                         return (
                           <div 
                             key={idx} 
-                            className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-medium border transition-colors ${
+                            className={`flex items-center space-x-2 px-4 py-3 rounded-xl text-sm font-black border transition-colors ${
                               isCorrect 
-                              ? 'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm' 
+                              ? 'bg-emerald-50 border-emerald-500 text-emerald-700 shadow-sm' 
                               : 'bg-slate-50 border-slate-100 text-slate-600'
                             }`}
                           >
-                            <span className={`opacity-40 ${isCorrect ? 'text-emerald-500' : ''}`}>
+                            <span className={`opacity-60 ${isCorrect ? 'text-emerald-500' : ''}`}>
                                 {q.type === QuestionType.TRUE_FALSE ? '•' : String.fromCharCode(65 + idx) + '.'}
                             </span>
                             <span>{opt}</span>
                             {isCorrect && (
-                              <svg className="w-4 h-4 ml-auto text-emerald-500" fill="currentColor" viewBox="0 0 20 20">
+                              <svg className="w-5 h-5 ml-auto text-emerald-500" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                               </svg>
                             )}
@@ -150,9 +152,23 @@ const QuestionBank: React.FC<QuestionBankProps> = ({ onBack }) => {
                     </div>
                   ) : null}
 
-                  <div className={`pt-4 border-t border-slate-100 flex items-center space-x-2 ${(!q.options || q.options.length === 0) && q.type !== QuestionType.TRUE_FALSE ? 'bg-emerald-50/30 -mx-8 px-8 py-4 mt-2' : ''}`}>
-                    <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">{t('correctAnswer')}:</span>
-                    <span className="text-sm font-black text-slate-800">{q.correctAnswer}</span>
+                  {/* ✅ Highlighted Correct Answer Section - Always Green */}
+                  <div className="mt-2 pt-4 border-t border-slate-100">
+                    <div className="flex items-center bg-emerald-50 border-2 border-emerald-200 rounded-2xl px-6 py-3 space-x-3">
+                      <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center shrink-0 shadow-lg shadow-emerald-200">
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest leading-none mb-1">
+                          {t('correctAnswer')}
+                        </span>
+                        <span className="text-base font-black text-emerald-900 leading-tight">
+                          {q.correctAnswer}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
