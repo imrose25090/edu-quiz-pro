@@ -15,7 +15,7 @@ interface AppState {
   chapters: Chapter[];
   questions: Question[];
   teachers: Teacher[];
-  students: any[]; // স্টুডেন্ট লিস্টের জন্য
+  students: any[];
   quizzes: Quiz[];
   language: Language;
   loading: boolean;
@@ -29,8 +29,8 @@ interface AppContextType extends AppState {
   bulkAddTeachers: (data: any[]) => Promise<void>;
   updateTeacher: (id: string, data: any) => Promise<void>;
   deleteTeacher: (id: string) => Promise<void>;
-  updateStudent: (id: string, data: any) => Promise<void>; // নতুন যোগ করা হয়েছে
-  deleteStudent: (id: string) => Promise<void>; // নতুন যোগ করা হয়েছে
+  updateStudent: (id: string, data: any) => Promise<void>;
+  deleteStudent: (id: string) => Promise<void>;
   bulkDelete: (collectionName: string, ids: string[]) => Promise<void>;
   deleteClass: (id: string) => Promise<void>;
   deleteQuestion: (id: string) => Promise<void>;
@@ -48,9 +48,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     loading: true
   });
 
-  // ✅ ১. রিয়েল-টাইম ডাটা লিসেনার
   useEffect(() => {
+    setState(p => ({ ...p, loading: true }));
+
     const unsubscribers = [
+      // ১. ক্লাস লিস্ট রিড করা (সিরিয়াল ঠিক রাখতে orderBy ব্যবহার করা হয়েছে)
       onSnapshot(query(collection(db, "classes"), orderBy("createdAt", "asc")), (s) => 
         setState(p => ({ ...p, classes: s.docs.map(d => ({ id: d.id, ...d.data() } as Class)) }))),
       
@@ -66,9 +68,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       onSnapshot(query(collection(db, "teachers"), orderBy("createdAt", "desc")), (s) => 
         setState(p => ({ ...p, teachers: s.docs.map(d => ({ id: d.id, ...d.data() } as Teacher)) }))),
 
-      // ✅ স্টুডেন্টদের জন্য লিসেনার (এটি আপনার আগের কোডে ছিল না)
       onSnapshot(query(collection(db, "users"), where("role", "==", "student")), (s) => 
-        setState(p => ({ ...p, students: s.docs.map(d => ({ id: d.id, ...d.data() })) })))
+        setState(p => ({ ...p, students: s.docs.map(d => ({ id: d.id, ...d.data() })) }))),
+
+      onSnapshot(query(collection(db, "quizzes"), orderBy("createdAt", "desc")), (s) => 
+        setState(p => ({ ...p, quizzes: s.docs.map(d => ({ id: d.id, ...d.data() } as Quiz)) })))
     ];
     
     setTimeout(() => setState(p => ({ ...p, loading: false })), 1000);
@@ -77,102 +81,88 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const t = (key: keyof typeof translations['en']) => translations[state.language][key] || key;
 
-  // ✅ ২. টিচার ম্যানেজমেন্ট
-  const bulkAddTeachers = async (data: any[]) => {
-    setState(p => ({ ...p, loading: true }));
-    try {
-      const batch = writeBatch(db);
-      data.forEach(teacher => {
-        const docRef = doc(collection(db, "teachers"));
-        batch.set(docRef, { ...teacher, createdAt: serverTimestamp() });
-      });
-      await batch.commit();
-    } catch (e) {
-      console.error("Bulk Add Teachers Failed:", e);
-    } finally {
-      setState(p => ({ ...p, loading: false }));
-    }
-  };
-
-  const updateTeacher = async (id: string, data: any) => {
-    try {
-      await updateDoc(doc(db, "teachers", id), data);
-    } catch (e) {
-      console.error("Update Teacher Failed:", e);
-    }
-  };
-
-  const deleteTeacher = async (id: string) => {
-    try {
-      await deleteDoc(doc(db, "teachers", id));
-    } catch (e) {
-      console.error("Delete Teacher Failed:", e);
-    }
-  };
-
-  // ✅ ৩. স্টুডেন্ট ম্যানেজমেন্ট (নতুন যোগ করা ফাংশন)
-  const updateStudent = async (id: string, data: any) => {
-    try {
-      await updateDoc(doc(db, "users", id), data);
-    } catch (e) {
-      console.error("Update Student Failed:", e);
-    }
-  };
-
-  const deleteStudent = async (id: string) => {
-    try {
-      await deleteDoc(doc(db, "users", id));
-    } catch (e) {
-      console.error("Delete Student Failed:", e);
-    }
-  };
-
-  // ✅ ৪. ম্যানেজমেন্ট সেকশন ফাংশনসমূহ
+  // --- ম্যানেজমেন্ট ফাংশনসমূহ (সঠিক ক্রম বজায় রাখার জন্য i * 100 মিলি-সেকেন্ড গ্যাপ যোগ করা হয়েছে) ---
+  
   const bulkAddClasses = async (names: string[]) => {
-    for (let i = 0; i < names.length; i++) {
-      const name = names[i].trim();
-      if (!name) continue;
-      const manualTime = new Date();
-      manualTime.setSeconds(manualTime.getSeconds() + i);
-      await addDoc(collection(db, "classes"), { name, createdAt: Timestamp.fromDate(manualTime) });
-      await new Promise(r => setTimeout(r, 100));
-    }
+    const batch = writeBatch(db);
+    const now = Date.now(); 
+    names.forEach((name, i) => {
+      if (name.trim()) {
+        const docRef = doc(collection(db, "classes"));
+        // i * 100 যোগ করা হয়েছে যাতে ফায়ারবেসে সিরিয়াল উল্টোপাল্টা না হয়
+        batch.set(docRef, { 
+          name: name.trim(), 
+          createdAt: Timestamp.fromMillis(now + (i * 100)) 
+        });
+      }
+    });
+    await batch.commit();
   };
 
   const bulkAddSubjects = async (data: any[]) => {
-    for (let i = 0; i < data.length; i++) {
-      const manualTime = new Date();
-      manualTime.setSeconds(manualTime.getSeconds() + i);
-      await addDoc(collection(db, "subjects"), { ...data[i], createdAt: Timestamp.fromDate(manualTime) });
-      await new Promise(r => setTimeout(r, 100));
-    }
+    const batch = writeBatch(db);
+    const now = Date.now();
+    data.forEach((item, i) => {
+      const docRef = doc(collection(db, "subjects"));
+      batch.set(docRef, { 
+        ...item, 
+        createdAt: Timestamp.fromMillis(now + (i * 100)) 
+      });
+    });
+    await batch.commit();
   };
 
   const bulkAddChapters = async (data: any[]) => {
-    for (let i = 0; i < data.length; i++) {
-      const manualTime = new Date();
-      manualTime.setSeconds(manualTime.getSeconds() + i);
-      await addDoc(collection(db, "chapters"), { ...data[i], createdAt: Timestamp.fromDate(manualTime) });
-      await new Promise(r => setTimeout(r, 100));
-    }
+    const batch = writeBatch(db);
+    const now = Date.now();
+    data.forEach((item, i) => {
+      const docRef = doc(collection(db, "chapters"));
+      batch.set(docRef, { 
+        ...item, 
+        createdAt: Timestamp.fromMillis(now + (i * 100)) 
+      });
+    });
+    await batch.commit();
   };
 
-  // ✅ ৫. কোয়েশ্চেন ম্যানেজমেন্ট
   const addBulkQuestions = async (newQuestions: any[]) => {
-    setState(p => ({ ...p, loading: true }));
-    try {
-      const batch = writeBatch(db);
-      newQuestions.forEach(q => {
-        const docRef = doc(collection(db, "questions"));
-        batch.set(docRef, { ...q, createdAt: serverTimestamp() });
+    const batch = writeBatch(db);
+    newQuestions.forEach(q => {
+      const docRef = doc(collection(db, "questions"));
+      batch.set(docRef, { 
+        ...q, 
+        classId: String(q.classId),
+        subjectId: String(q.subjectId),
+        chapterId: String(q.chapterId),
+        createdAt: serverTimestamp() 
       });
-      await batch.commit();
-    } catch (e) {
-      console.error("Bulk Add Questions Failed:", e);
-      throw e;
-    } finally {
-      setState(p => ({ ...p, loading: false }));
-    }
+    });
+    await batch.commit();
+  };
+
+  const bulkAddTeachers = async (data: any[]) => {
+    const batch = writeBatch(db);
+    data.forEach(teacher => {
+      const docRef = doc(collection(db, "teachers"));
+      batch.set(docRef, { ...teacher, createdAt: serverTimestamp() });
+    });
+    await batch.commit();
+  };
+
+  const updateTeacher = async (id: string, data: any) => {
+    await updateDoc(doc(db, "teachers", id), data);
+  };
+
+  const deleteTeacher = async (id: string) => {
+    await deleteDoc(doc(db, "teachers", id));
+  };
+
+  const updateStudent = async (id: string, data: any) => {
+    await updateDoc(doc(db, "users", id), data);
+  };
+
+  const deleteStudent = async (id: string) => {
+    await deleteDoc(doc(db, "users", id));
   };
 
   const bulkDelete = async (collectionName: string, ids: string[]) => {
@@ -196,7 +186,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...state, 
       bulkAddClasses, bulkAddSubjects, bulkAddChapters, addBulkQuestions,
       bulkAddTeachers, updateTeacher, deleteTeacher,
-      updateStudent, deleteStudent, // ✅ এক্সপোর্ট করা হলো
+      updateStudent, deleteStudent,
       bulkDelete, deleteClass, deleteQuestion, deleteAllQuestions,
       setLanguage: (l: Language) => setState(p => ({ ...p, language: l })), t
     }}>
