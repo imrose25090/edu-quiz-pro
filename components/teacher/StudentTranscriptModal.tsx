@@ -47,7 +47,6 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
 
   const style = getRankStyle(rankData.rank);
 
-  // ✅ ফিক্সড ডাউনলোড ফাংশন
   const handleDownload = () => {
     const element = document.getElementById('premium-transcript');
     if (!element) return;
@@ -59,17 +58,16 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
       filename: fileName,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { 
-        scale: 2, // ৩ স্কেলে মেমোরি ইস্যু হতে পারে, ২ নিরাপদ
+        scale: 2, 
         useCORS: true, 
-        scrollY: 0, // স্ক্রল পজিশন জিরো না থাকলে সাদা পেজ আসে
-        windowWidth: 1000, // একটি ফিক্সড উইন্ডো উইডথ নিশ্চিত করা
+        scrollY: 0, 
+        windowWidth: 1000,
         letterRendering: true
       },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
       pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
     };
 
-    // ডাউনলোড শুরু করার আগে কনসোলে এরর চেক করতে পারেন
     html2pdf().set(opt).from(element).save();
   };
 
@@ -80,12 +78,12 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
         {/* Navigation Bar */}
         <div className="p-4 bg-white border-b flex justify-between items-center no-print shadow-sm">
           <div className="flex items-center gap-2">
-            <button onClick={() => setIsEditingName(!isEditingName)} className="text-[10px] font-bold text-indigo-600 uppercase bg-indigo-50 px-3 py-1.5 rounded-lg">
+            <button onClick={() => setIsEditingName(!isEditingName)} className="text-sm font-bold text-indigo-600 uppercase bg-indigo-50 px-4 py-2 rounded-lg">
               {isEditingName ? 'Save' : 'Edit Name'}
             </button>
             {isEditingName && (
               <input 
-                className="border-2 border-indigo-600 px-2 py-1 rounded-lg font-bold text-xs outline-none w-32 text-black"
+                className="border-2 border-indigo-600 px-3 py-1.5 rounded-lg font-bold text-base outline-none w-48 text-black"
                 value={coachingName}
                 onChange={(e) => saveCoachingName(e.target.value)}
                 autoFocus
@@ -93,50 +91,50 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
             )}
           </div>
           <div className="flex gap-2">
-            <button onClick={handleDownload} className="bg-indigo-600 text-white px-6 py-2 rounded-xl font-black text-xs uppercase shadow-lg active:scale-95 transition-all">Download PDF</button>
+            <button onClick={handleDownload} className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-black text-[14px] uppercase shadow-lg active:scale-95 transition-all">Download PDF</button>
             <button onClick={onClose} className="w-10 h-10 bg-slate-100 text-slate-500 rounded-xl font-black text-xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all">×</button>
           </div>
         </div>
 
         {/* PDF Content Area */}
-        <div className="flex-1 overflow-y-auto bg-slate-200 custom-scrollbar">
-          <div id="premium-transcript" style={{ width: '100%', background: '#ffffff', boxSizing: 'border-box', padding: '40px 30px' }}>
+        <div className="flex-1 overflow-y-auto bg-slate-200 custom-scrollbar p-2 md:p-6">
+          <div id="premium-transcript" style={{ width: '100%', minWidth: '320px', background: '#ffffff', boxSizing: 'border-box', padding: '40px 30px' }}>
             
             {/* Header */}
-            <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-              <h1 style={{ fontSize: '42px', fontWeight: '1000', color: '#1e40af', margin: '0', textTransform: 'uppercase', lineHeight: '1.2' }}>
+            <div style={{ textAlign: 'center', marginBottom: '45px' }}>
+              <h1 style={{ fontSize: '48px', fontWeight: '1000', color: '#1e40af', margin: '0', textTransform: 'uppercase', lineHeight: '1' }}>
                 {coachingName}
               </h1>
-              <div style={{ height: '4px', width: '100px', backgroundColor: '#3b82f6', margin: '15px auto' }}></div>
-              <p style={{ fontSize: '14px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase', letterSpacing: '5px' }}>
+              <div style={{ height: '6px', width: '100px', backgroundColor: '#3b82f6', margin: '20px auto', borderRadius: '10px' }}></div>
+              <p style={{ fontSize: '18px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase', letterSpacing: '4px' }}>
                 Academic Transcript Report
               </p>
             </div>
 
             {/* Dashboard */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr 1fr', gap: '15px', marginBottom: '40px' }}>
-              <div style={{ padding: '25px 10px', backgroundColor: '#f0f9ff', borderRadius: '25px', textAlign: 'center', border: '2px solid #bae6fd' }}>
-                <span style={{ fontSize: '12px', fontWeight: '900', color: '#0369a1', textTransform: 'uppercase' }}>Student</span>
-                <p style={{ fontSize: '24px', fontWeight: '1000', color: '#0c4a6e', marginTop: '10px' }}>{attempt.studentName}</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '20px', marginBottom: '45px' }}>
+              <div style={{ padding: '25px 15px', backgroundColor: '#f0f9ff', borderRadius: '28px', textAlign: 'center', border: '2px solid #bae6fd', WebkitPrintColorAdjust: 'exact' }}>
+                <span style={{ fontSize: '14px', fontWeight: '900', color: '#0369a1', textTransform: 'uppercase' }}>Student</span>
+                <p style={{ fontSize: '26px', fontWeight: '1000', color: '#0c4a6e', marginTop: '10px' }}>{attempt.studentName}</p>
               </div>
 
-              <div style={{ padding: '25px 10px', backgroundColor: style.bg, borderRadius: '25px', textAlign: 'center', border: `4px solid ${style.color}`, boxShadow: '0 10px 20px -5px rgba(0,0,0,0.1)' }}>
+              <div style={{ padding: '25px 15px', backgroundColor: style.bg, borderRadius: '28px', textAlign: 'center', border: `4px solid ${style.color}`, boxShadow: '0 10px 20px -5px rgba(0,0,0,0.1)', WebkitPrintColorAdjust: 'exact' }}>
                 <div style={{ fontSize: '40px', lineHeight: '1' }}>{style.icon}</div>
                 <p style={{ fontSize: '32px', fontWeight: '1000', color: '#0f172a', margin: '5px 0' }}>#{rankData.rank}</p>
-                <span style={{ fontSize: '10px', fontWeight: '900', color: style.color }}>{style.label}</span>
+                <span style={{ fontSize: '12px', fontWeight: '900', color: style.color }}>{style.label}</span>
               </div>
 
-              <div style={{ padding: '25px 10px', backgroundColor: '#f0fdf4', borderRadius: '25px', textAlign: 'center', border: '2px solid #bbf7d0' }}>
-                <span style={{ fontSize: '12px', fontWeight: '900', color: '#15803d', textTransform: 'uppercase' }}>Score</span>
-                <p style={{ fontSize: '24px', fontWeight: '1000', color: '#14532d', marginTop: '10px' }}>{attempt.score}/{totalPossibleMarks}</p>
+              <div style={{ padding: '25px 15px', backgroundColor: '#f0fdf4', borderRadius: '28px', textAlign: 'center', border: '2px solid #bbf7d0', WebkitPrintColorAdjust: 'exact' }}>
+                <span style={{ fontSize: '14px', fontWeight: '900', color: '#15803d', textTransform: 'uppercase' }}>Score</span>
+                <p style={{ fontSize: '26px', fontWeight: '1000', color: '#14532d', marginTop: '10px' }}>{attempt.score}/{totalPossibleMarks}</p>
               </div>
             </div>
 
             {/* Exam Analysis */}
-            <div style={{ marginBottom: '50px' }}>
-              <h3 style={{ fontSize: '24px', fontWeight: '1000', color: '#1e293b', marginBottom: '30px', borderLeft: '15px solid #2563eb', paddingLeft: '20px' }}>EXAM ANALYSIS</h3>
+            <div style={{ marginBottom: '60px' }}>
+              <h3 style={{ fontSize: '28px', fontWeight: '1000', color: '#1e293b', marginBottom: '35px', borderLeft: '15px solid #2563eb', paddingLeft: '20px' }}>EXAM ANALYSIS</h3>
               
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
                 {quiz.questions.map((q: any, idx: number) => {
                   const userAns = String((attempt.answers as any)?.[q.id] || '').trim();
                   const correctAns = String(q.answer || q.correctAnswer || '').trim();
@@ -145,36 +143,40 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
                   const isGapFill = !q.options || q.options.length <= 1;
 
                   return (
-                    <div key={idx} style={{ padding: '30px', borderRadius: '30px', backgroundColor: isCorrect ? '#f0fdf4' : '#fff1f2', border: '2px solid', borderColor: isCorrect ? '#dcfce7' : '#fecdd3', pageBreakInside: 'avoid' }}>
-                      <p style={{ fontSize: '20px', fontWeight: '900', color: '#1e293b', margin: '0 0 20px 0', lineHeight: '1.5' }}>
+                    <div key={idx} style={{ padding: '30px', borderRadius: '32px', backgroundColor: isCorrect ? '#f0fdf4' : '#fff1f2', border: '2px solid', borderColor: isCorrect ? '#dcfce7' : '#fecdd3', pageBreakInside: 'avoid', WebkitPrintColorAdjust: 'exact' }}>
+                      <p style={{ fontSize: '22px', fontWeight: '900', color: '#1e293b', margin: '0 0 20px 0', lineHeight: '1.4' }}>
                         <span style={{ color: isCorrect ? '#16a34a' : '#e11d48', marginRight: '10px' }}>{idx + 1}.</span> 
                         {q.text || q.questionText}
                       </p>
                       
                       {isGapFill ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                           <div style={{ 
-                            padding: '15px 20px', 
-                            borderRadius: '15px', 
+                            padding: '18px 24px', 
+                            borderRadius: '16px', 
                             backgroundColor: '#ffffff', 
                             border: '3px dashed', 
                             borderColor: isCorrect ? '#16a34a' : '#e11d48',
                             color: isCorrect ? '#15803d' : '#e11d48',
-                            fontSize: '18px',
+                            fontSize: '20px',
                             fontWeight: '800'
                           }}>
-                            <span style={{ fontSize: '12px', textTransform: 'uppercase', display: 'block', opacity: 0.6, marginBottom: '5px' }}>Your Answer:</span>
+                            <span style={{ fontSize: '12px', textTransform: 'uppercase', display: 'block', opacity: 0.6 }}>Your Answer:</span>
                             {userAns || "No Answer"}
                           </div>
-                          
                           {!isCorrect && (
-                            <div style={{ padding: '10px 20px', color: '#16a34a', fontSize: '18px', fontWeight: '700' }}>
+                            <div style={{ padding: '5px 10px', color: '#16a34a', fontSize: '18px', fontWeight: '700' }}>
                               ✅ Correct Answer: {correctAns}
                             </div>
                           )}
                         </div>
                       ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        /* Options Layout - Force 2 Columns if space permits */
+                        <div style={{ 
+                          display: 'grid', 
+                          gridTemplateColumns: '1fr 1fr', 
+                          gap: '15px' 
+                        }}>
                           {(q.options || []).map((opt: string, oIdx: number) => {
                             const isSelected = userAns === opt.trim();
                             const isRight = correctAns === opt.trim();
@@ -188,7 +190,19 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
                             else if (isRight) { optBg = '#f0fdf4'; optBorder = '#22c55e'; optColor = '#15803d'; }
 
                             return (
-                              <div key={oIdx} style={{ padding: '15px 20px', borderRadius: '15px', fontSize: '16px', fontWeight: '800', border: '2px solid', borderColor: optBorder, backgroundColor: optBg, color: optColor, display: 'flex', alignItems: 'center' }}>
+                              <div key={oIdx} style={{ 
+                                padding: '18px 20px', 
+                                borderRadius: '18px', 
+                                fontSize: '18px', 
+                                fontWeight: '800', 
+                                border: '2px solid', 
+                                borderColor: optBorder, 
+                                backgroundColor: optBg, 
+                                color: optColor, 
+                                display: 'flex', 
+                                alignItems: 'center',
+                                WebkitPrintColorAdjust: 'exact'
+                              }}>
                                 <span style={{ opacity: 0.5, marginRight: '10px', fontSize: '14px' }}>{String.fromCharCode(65 + oIdx)}.</span> {opt}
                               </div>
                             );
@@ -202,23 +216,23 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
             </div>
 
             {/* Footer */}
-            <div style={{ marginTop: '40px', borderTop: '5px solid #f1f5f9', paddingTop: '40px' }}>
-              <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-                <p style={{ fontSize: '16px', fontWeight: '800', color: '#64748b', fontStyle: 'italic' }}>"{randomQuote.text}"</p>
-                <p style={{ fontSize: '14px', fontWeight: '1000', color: '#2563eb', marginTop: '10px' }}>— {randomQuote.author}</p>
+            <div style={{ marginTop: '50px', borderTop: '5px solid #f1f5f9', paddingTop: '50px' }}>
+              <div style={{ textAlign: 'center', marginBottom: '50px' }}>
+                <p style={{ fontSize: '20px', fontWeight: '800', color: '#64748b', fontStyle: 'italic', padding: '0 20px' }}>"{randomQuote.text}"</p>
+                <p style={{ fontSize: '18px', fontWeight: '1000', color: '#2563eb', marginTop: '12px' }}>— {randomQuote.author}</p>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '30px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                  <div style={{ width: '45px', height: '45px', background: '#2563eb', borderRadius: '12px', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '1000', fontSize: '24px' }}>Q</div>
+                  <div style={{ width: '50px', height: '50px', background: '#2563eb', borderRadius: '14px', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '1000', fontSize: '26px', WebkitPrintColorAdjust: 'exact' }}>Q</div>
                   <div>
-                    <p style={{ margin: 0, fontSize: '20px', fontWeight: '1000', color: 'black' }}>EDUQUIZ <span style={{ color: '#2563eb' }}>PRO</span></p>
-                    <p style={{ margin: 0, fontSize: '10px', color: '#94a3b8', fontWeight: '900', letterSpacing: '2px' }}>SMART ASSESSMENT SYSTEM</p>
+                    <p style={{ margin: 0, fontSize: '22px', fontWeight: '1000', color: 'black' }}>EDUQUIZ <span style={{ color: '#2563eb' }}>PRO</span></p>
+                    <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8', fontWeight: '900', letterSpacing: '2px' }}>SMART ASSESSMENT SYSTEM</p>
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <p style={{ margin: 0, fontSize: '10px', fontWeight: '1000', color: '#94a3b8' }}>OFFICIAL VERIFIED RECORD</p>
-                  <p style={{ margin: 0, fontSize: '12px', fontWeight: '900', color: '#1e293b' }}>ID: {quiz.id.slice(0, 8).toUpperCase()}</p>
+                  <p style={{ margin: 0, fontSize: '12px', fontWeight: '1000', color: '#94a3b8' }}>OFFICIAL VERIFIED RECORD</p>
+                  <p style={{ margin: 0, fontSize: '14px', fontWeight: '900', color: '#1e293b' }}>ID: {quiz.id.slice(0, 8).toUpperCase()}</p>
                 </div>
               </div>
             </div>
