@@ -22,8 +22,11 @@ const AdminPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const [editingChapterPassage, setEditingChapterPassage] = useState<string | null>(null);
   const [passageInput, setPassageInput] = useState('');
 
-  // ✅ ক্লাসগুলোকে তাদের রেজিস্ট্রেশন অর্ডার (ID বা Serial) অনুযায়ী সাজানো
-  // এতে ড্রপডাউনগুলোতে "যেটা আগে অ্যাড হয়েছে সেটা আগে দেখাবে"
+  // ✅ লাইভ স্টুডেন্ট কাউন্ট এবং ডাটা নিশ্চিত করা
+  const liveStudents = useMemo(() => store.students || [], [store.students]);
+  const liveTeachers = useMemo(() => store.teachers || [], [store.teachers]);
+
+  // ✅ ক্লাসগুলোকে অর্ডার অনুযায়ী সাজানো
   const orderedClasses = useMemo(() => {
     return [...store.classes].sort((a, b) => {
       const idA = a.id || '';
@@ -71,7 +74,7 @@ const AdminPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           />
         </div>
 
-        {/* Content Section */}
+        {/* Dynamic Content Rendering */}
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           
           {activeTab === 'CLASSES' && (
@@ -127,7 +130,7 @@ const AdminPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           
           {activeTab === 'TEACHERS' && (
             <TeacherManagement 
-              teachers={store.teachers} 
+              teachers={liveTeachers} 
               bulkAddTeachers={store.bulkAddTeachers} 
               updateTeacher={store.updateTeacher} 
               deleteTeacher={store.deleteTeacher} 
@@ -138,14 +141,12 @@ const AdminPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           {(activeTab === 'REGISTRY' || activeTab === 'STUDENT') && (
             <MasterRegistry 
               activeTab={activeTab} 
-              setActiveTab={setActiveTab} 
               classes={orderedClasses} 
               subjects={store.subjects} 
               chapters={store.chapters} 
               questions={store.questions} 
-              teachers={store.teachers} 
-              students={store.students || []} 
-              quizzes={store.quizzes || []} 
+              teachers={liveTeachers} 
+              students={liveStudents} 
               selectedClassId={selectedClassId} 
               selectedSubjectId={selectedSubjectId} 
               deleteClass={store.deleteClass} 
@@ -156,10 +157,6 @@ const AdminPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
               deleteStudent={store.deleteStudent} 
               updateTeacher={store.updateTeacher} 
               updateStudent={store.updateStudent} 
-              bulkDelete={store.bulkDelete} 
-              setEditingChapterPassage={setEditingChapterPassage} 
-              setPassageInput={setPassageInput} 
-              generateRandomPin={() => Math.floor(1000 + Math.random() * 9000).toString()} 
             />
           )}
           
@@ -174,15 +171,12 @@ const AdminPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         </div>
       </div>
 
-      {/* Passage Edit Modal */}
       {editingChapterPassage && (
         <PassageModal 
           passageInput={passageInput} 
           setPassageInput={setPassageInput} 
           onSave={async () => { 
-            if (store.updateChapter) {
-              await store.updateChapter(editingChapterPassage, { passageContent: passageInput }); 
-            }
+            if (store.updateChapter) await store.updateChapter(editingChapterPassage, { passageContent: passageInput });
             setEditingChapterPassage(null); 
           }} 
           onCancel={() => setEditingChapterPassage(null)} 
