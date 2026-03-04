@@ -38,8 +38,9 @@ const TeacherPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     chapterIds: [] as string[],
     qCount: 10, 
     time: 30, 
-    mode: 'INTERACTIVE_QUIZ' as any, 
-    selectedTypes: [] as string[]
+    mode: 'AUTO' as any, // Default to AUTO
+    typeCounts: {} as Record<string, number>,
+    selectedQuestionIds: [] as string[] // ✅ এই ফিল্ডটি অতি প্রয়োজনীয়
   });
 
   const [manualSelectedIds, setManualSelectedIds] = useState<string[]>([]);
@@ -83,44 +84,55 @@ const TeacherPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     }
   };
 
-  // ✅ FIXED: Launch Quiz Logic with Options Sanitization
+  // ✅ FIXED & SECURED: Launch Quiz Logic
   const handleLaunch = async () => {
     if (!newQuiz.title || !newQuiz.classId || !newQuiz.subjectId) {
       return alert("Please fill all required fields!");
     }
     
+    if (newQuiz.qCount === 0) {
+      return alert("Please select at least one question!");
+    }
+
     setLoading(true);
 
     try {
-      let pool = questions.filter(q => 
-        q.classId === newQuiz.classId && 
-        q.subjectId === newQuiz.subjectId
-      );
+      let finalSelectedQs: any[] = [];
 
-      if (newQuiz.chapterIds && newQuiz.chapterIds.length > 0) {
-        pool = pool.filter(q => newQuiz.chapterIds.includes(q.chapterId));
+      // ১. যদি ম্যানুয়াল আইডি থাকে (AUTO বা MANUAL যেভাবেই আসুক)
+      // আমরা সরাসরি সেই আইডিগুলো ফিল্টার করে নিব
+      const targetIds = newQuiz.selectedQuestionIds.length > 0 
+        ? newQuiz.selectedQuestionIds 
+        : manualSelectedIds;
+
+      if (targetIds.length > 0) {
+        finalSelectedQs = questions.filter(q => targetIds.includes(q.id));
+      } else {
+        // ২. যদি কোনো আইডি না থাকে (ফলব্যাক হিসেবে র্যান্ডম সিলেকশন)
+        let pool = questions.filter(q => 
+          q.classId === newQuiz.classId && 
+          q.subjectId === newQuiz.subjectId
+        );
+
+        if (newQuiz.chapterIds?.length > 0) {
+          pool = pool.filter(q => newQuiz.chapterIds.includes(q.chapterId));
+        }
+
+        finalSelectedQs = pool.sort(() => 0.5 - Math.random()).slice(0, newQuiz.qCount);
       }
 
-      if (newQuiz.selectedTypes && newQuiz.selectedTypes.length > 0) {
-        pool = pool.filter(q => newQuiz.selectedTypes.includes(q.type));
-      }
-
-      const rawSelectedQs = pool.sort(() => 0.5 - Math.random()).slice(0, newQuiz.qCount);
-      
-      if (rawSelectedQs.length === 0) {
+      if (finalSelectedQs.length === 0) {
         alert("No questions found for the selected criteria!");
         setLoading(false);
         return;
       }
 
-      // ✅ গুরুত্বপূর্ণ ধাপ: প্রশ্নগুলোকে স্যানিটাইজ করা
-      const sanitizedQuestions = rawSelectedQs.map(q => {
+      // ৩. স্যানিটাইজেশন
+      const sanitizedQuestions = finalSelectedQs.map(q => {
         const type = String(q.type || "").toUpperCase();
         const isInputType = type === 'FILL_IN_THE_GAP' || type === 'SHORT_ANSWER';
-        
         return {
           ...q,
-          // যদি ইনপুট টাইপ হয়, তবে অপশন অবশ্যই ফাঁকা অ্যারে হবে
           options: isInputType ? [] : (q.options || [])
         };
       });
@@ -132,7 +144,7 @@ const TeacherPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         teacherName: activeTeacher?.name,
         classId: newQuiz.classId,
         subjectId: newQuiz.subjectId,
-        questions: sanitizedQuestions, // স্যানিটাইজ করা ডাটা সেভ হচ্ছে
+        questions: sanitizedQuestions,
         attempts: [], 
         createdAt: new Date().toISOString(),
         timestamp: serverTimestamp(),
@@ -147,7 +159,12 @@ const TeacherPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       
       alert(`Quiz Created! Code: ${quizData.code}`);
       setView('LIST');
-      setNewQuiz({ ...newQuiz, title: '', chapterIds: [] });
+      // Reset form
+      setNewQuiz({ 
+        title: '', classId: '', subjectId: '', chapterIds: [], 
+        qCount: 10, time: 30, mode: 'AUTO', typeCounts: {}, selectedQuestionIds: [] 
+      });
+      setManualSelectedIds([]);
     } catch (err) {
       console.error(err);
       alert("Failed to create quiz!");
@@ -236,9 +253,6 @@ const TeacherPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             attempt={viewingAttempt}
             quiz={selectedQuiz}
             onClose={() => setViewingAttempt(null)}
-            onExport={() => window.print()}
-            isExporting={false}
-            attemptSheetRef={attemptSheetRef}
             getRankInfo={getRankInfo}
           />
         )}
