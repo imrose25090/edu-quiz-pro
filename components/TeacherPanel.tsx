@@ -38,9 +38,9 @@ const TeacherPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     chapterIds: [] as string[],
     qCount: 10, 
     time: 30, 
-    mode: 'AUTO' as any, // Default to AUTO
+    mode: 'AUTO' as any,
     typeCounts: {} as Record<string, number>,
-    selectedQuestionIds: [] as string[] // ✅ এই ফিল্ডটি অতি প্রয়োজনীয়
+    selectedQuestionIds: [] as string[]
   });
 
   const [manualSelectedIds, setManualSelectedIds] = useState<string[]>([]);
@@ -84,53 +84,55 @@ const TeacherPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     }
   };
 
-  // ✅ FIXED & SECURED: Launch Quiz Logic
+  // ✅ FINAL FIXED: Launch Quiz Logic
   const handleLaunch = async () => {
     if (!newQuiz.title || !newQuiz.classId || !newQuiz.subjectId) {
       return alert("Please fill all required fields!");
     }
     
-    if (newQuiz.qCount === 0) {
-      return alert("Please select at least one question!");
-    }
-
     setLoading(true);
 
     try {
       let finalSelectedQs: any[] = [];
 
-      // ১. যদি ম্যানুয়াল আইডি থাকে (AUTO বা MANUAL যেভাবেই আসুক)
-      // আমরা সরাসরি সেই আইডিগুলো ফিল্টার করে নিব
-      const targetIds = newQuiz.selectedQuestionIds.length > 0 
+      // ১. অগ্রাধিকার ভিত্তিক সিলেকশন (ID-ভিত্তিক)
+      // Form থেকে আসা selectedQuestionIds অথবা ম্যানুয়ালি সিলেক্ট করা আইডিগুলো ব্যবহার করবো
+      const targetIds = newQuiz.selectedQuestionIds && newQuiz.selectedQuestionIds.length > 0 
         ? newQuiz.selectedQuestionIds 
         : manualSelectedIds;
 
       if (targetIds.length > 0) {
+        // শুধুমাত্র সেই আইডিগুলো নিবো যা ডাটাবেসে আছে
         finalSelectedQs = questions.filter(q => targetIds.includes(q.id));
-      } else {
-        // ২. যদি কোনো আইডি না থাকে (ফলব্যাক হিসেবে র্যান্ডম সিলেকশন)
+      } 
+      else {
+        // ২. যদি কোনো আইডি সিলেক্ট করা না থাকে, তবেই অটো পুল তৈরি হবে 
+        // কিন্তু এটিও অবশ্যই ক্লাস এবং সাবজেক্ট ফিল্টার মেনে চলবে
         let pool = questions.filter(q => 
           q.classId === newQuiz.classId && 
           q.subjectId === newQuiz.subjectId
         );
 
-        if (newQuiz.chapterIds?.length > 0) {
+        if (newQuiz.chapterIds && newQuiz.chapterIds.length > 0) {
           pool = pool.filter(q => newQuiz.chapterIds.includes(q.chapterId));
         }
 
+        // র্যান্ডমলি প্রয়োজনীয় সংখ্যক প্রশ্ন নেওয়া
         finalSelectedQs = pool.sort(() => 0.5 - Math.random()).slice(0, newQuiz.qCount);
       }
 
+      // ৩. ভ্যালিডেশন: কোনো প্রশ্ন পাওয়া না গেলে থামিয়ে দিবে
       if (finalSelectedQs.length === 0) {
-        alert("No questions found for the selected criteria!");
+        alert("Error: No valid questions found! Please select types or questions correctly.");
         setLoading(false);
         return;
       }
 
-      // ৩. স্যানিটাইজেশন
+      // ৪. স্যানিটাইজেশন (টাইপ অনুযায়ী অপশন ক্লিয়ার করা)
       const sanitizedQuestions = finalSelectedQs.map(q => {
         const type = String(q.type || "").toUpperCase();
-        const isInputType = type === 'FILL_IN_THE_GAP' || type === 'SHORT_ANSWER';
+        // টাইপ যদি ইনপুট ভিত্তিক হয় তবে অপশন থাকবে না
+        const isInputType = type.includes('SHORT') || type.includes('GAP') || type.includes('FILL');
         return {
           ...q,
           options: isInputType ? [] : (q.options || [])
@@ -157,17 +159,18 @@ const TeacherPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
       await addDoc(collection(db, "quizzes"), quizData);
       
-      alert(`Quiz Created! Code: ${quizData.code}`);
+      alert(`Quiz Created Successfully! Code: ${quizData.code}`);
       setView('LIST');
-      // Reset form
+      
+      // ৫. ফর্ম রিসেট
       setNewQuiz({ 
         title: '', classId: '', subjectId: '', chapterIds: [], 
         qCount: 10, time: 30, mode: 'AUTO', typeCounts: {}, selectedQuestionIds: [] 
       });
       setManualSelectedIds([]);
     } catch (err) {
-      console.error(err);
-      alert("Failed to create quiz!");
+      console.error("Launch Error:", err);
+      alert("Failed to create quiz! Check console for details.");
     } finally {
       setLoading(false);
     }
