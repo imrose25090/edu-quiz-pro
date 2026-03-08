@@ -162,105 +162,74 @@ export const QuestionPaperView: React.FC<QuestionPaperViewProps> = ({
                 </div>
                 <div className="text-right leading-tight">
                   <p>পূর্ণমান: {selectedQuiz.config?.totalMarks || 0}</p>
-                  <p>সময়: {selectedQuiz.config?.totalTime || 0} মিনিট</p>
+                  <p>সময়: {selectedQuiz.config?.totalTime || 0} মিনিট</p>
                 </div>
               </div>
             </div>
 
-{/* Questions Section */}
-<div style={{ columnCount: columns, columnGap: '40px', columnRule: columns > 1 ? '1px solid #000' : 'none' }}>
-  <div style={{ lineHeight: lineSpacing }} className="space-y-8">
-    {selectedQuiz.questions?.map((q: any, index: number) => {
-      // ✅ Type check handling (Case-insensitive)
-      const qType = String(q.type || "").toUpperCase();
-      // ✅ Check for options in different possible field names
-      const qOptions = q.options || q.choices || [];
+            {/* Questions Section */}
+            <div style={{ columnCount: columns, columnGap: '40px', columnRule: columns > 1 ? '1px solid #000' : 'none' }}>
+              <div style={{ lineHeight: lineSpacing }} className="space-y-8">
+                {selectedQuiz.questions?.map((q: any, index: number) => {
+                  const qType = String(q.type || "").toUpperCase();
+                  const qOptions = q.options || q.choices || [];
 
-      return (
-        <div key={q.id || index} style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }} className="block mb-6">
-          <div className="flex items-start gap-3">
-            <span className="font-black text-black shrink-0 min-w-[28px]">
-              {numberStyle === 'upper-roman' ? `${toRoman(index + 1)}.` : `${index + 1}.`}
-            </span>
-            
-            <div className="flex-1">
-              <div className="flex justify-between items-start gap-2">
-                <p className="font-bold text-black" style={{ lineHeight: lineSpacing }}>
-                  {q.text || q.questionText || q.question}
-                </p>
-                <span className="text-[11px] font-bold text-black whitespace-nowrap">[{q.marks || 1}]</span>
-              </div>
-
-              {/* ✅ MCQ Options Grid */}
-              {qType === 'MCQ' && qOptions.length > 0 && (
-                <div className="grid grid-cols-2 gap-x-6 gap-y-2 mt-3 text-black">
-                  {qOptions.map((opt: string, idx: number) => (
-                    <div key={idx} className="flex items-start gap-2">
-                      <span className="w-5 h-5 rounded-full border border-black flex items-center justify-center text-[10px] font-black shrink-0 mt-0.5">
-                        {String.fromCharCode(97 + idx)}
-                      </span>
-                      <span style={{ lineHeight: lineSpacing }}>{opt}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* ✅ Answer Box */}
-              {showAnswers && (
-                <div className="mt-3 flex justify-center">
-                  <div 
-                    style={{
-                      border: '2px solid #2563eb',
-                      padding: '6px 20px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor: '#eff6ff',
-                      borderRadius: '8px',
-                      WebkitPrintColorAdjust: 'exact',
-                      minWidth: '60%'
-                    }}
-                  >
-                    <span style={{ fontWeight: 1000, fontSize: '13px', color: '#1e40af', textTransform: 'uppercase', textAlign: 'center' }}>
-                      ➤ সঠিক উত্তর: {q.correctAnswer || q.answer || "N/A"}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      );
-    })}
-  </div>
-</div>
-
-                        {/* ✅ Answer Centered in Box */}
-                        {showAnswers && (
-                          <div className="mt-3 flex justify-center">
-                            <div 
-                              style={{
-                                border: '2px solid #2563eb',
-                                padding: '6px 20px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                backgroundColor: '#eff6ff',
-                                borderRadius: '8px',
-                                WebkitPrintColorAdjust: 'exact',
-                                minWidth: '60%' // Ensures the box looks balanced
-                              }}
-                            >
-                              <span style={{ fontWeight: 1000, fontSize: '13px', color: '#1e40af', textTransform: 'uppercase', textAlign: 'center' }}>
-                                ➤ সঠিক উত্তর: {q.correctAnswer || q.answer || "N/A"}
-                              </span>
-                            </div>
+                  return (
+                    <div key={q.id || index} style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }} className="block mb-6">
+                      <div className="flex items-start gap-3">
+                        <span className="font-black text-black shrink-0 min-w-[28px]">
+                          {numberStyle === 'upper-roman' ? `${toRoman(index + 1)}.` : `${index + 1}.`}
+                        </span>
+                        
+                        <div className="flex-1">
+                          <div className="flex justify-between items-start gap-2">
+                            <p className="font-bold text-black" style={{ lineHeight: lineSpacing }}>
+                              {q.text || q.questionText || q.question}
+                            </p>
+                            <span className="text-[11px] font-bold text-black whitespace-nowrap">[{q.marks || 1}]</span>
                           </div>
-                        )}
+
+                          {/* ✅ MCQ Options Grid */}
+                          {qType === 'MCQ' && qOptions.length > 0 && (
+                            <div className="grid grid-cols-2 gap-x-6 gap-y-2 mt-3 text-black">
+                              {qOptions.map((opt: string, idx: number) => (
+                                <div key={idx} className="flex items-start gap-2">
+                                  <span className="w-5 h-5 rounded-full border border-black flex items-center justify-center text-[10px] font-black shrink-0 mt-0.5">
+                                    {String.fromCharCode(97 + idx)}
+                                  </span>
+                                  <span style={{ lineHeight: lineSpacing }}>{opt}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* ✅ Answer Box */}
+                          {showAnswers && (
+                            <div className="mt-3 flex justify-center">
+                              <div 
+                                style={{
+                                  border: '2px solid #2563eb',
+                                  padding: '6px 20px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  backgroundColor: '#eff6ff',
+                                  borderRadius: '8px',
+                                  WebkitPrintColorAdjust: 'exact',
+                                  minWidth: '60%'
+                                }}
+                              >
+                                <span style={{ fontWeight: 1000, fontSize: '13px', color: '#1e40af', textTransform: 'uppercase', textAlign: 'center' }}>
+                                  ➤ সঠিক উত্তর: {q.correctAnswer || q.answer || "N/A"}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -270,7 +239,7 @@ export const QuestionPaperView: React.FC<QuestionPaperViewProps> = ({
                 <div 
                   className="py-4 mb-8 text-center" 
                   style={{ 
-                    border: 'none', // No border as requested
+                    border: 'none', 
                     backgroundColor: 'transparent', 
                     WebkitPrintColorAdjust: 'exact' 
                   }}
