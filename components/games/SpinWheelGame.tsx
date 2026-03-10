@@ -1,4 +1,3 @@
-```tsx
 import React, { useState } from "react";
 
 const topics = ["Math", "Science", "English", "GK"];
@@ -32,4 +31,3 @@ const SpinWheelGame: React.FC = () => {
 };
 
 export default SpinWheelGame;
-```
