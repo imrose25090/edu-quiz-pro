@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { collection, query, where, getDocs, updateDoc, arrayUnion, doc, getDoc } from "firebase/firestore";
+import { collection, query, where, getDocs, updateDoc, arrayUnion, doc, increment } from "firebase/firestore";
 
 import { StudentLogin } from './student/StudentLogin';
 import { QuizScreen } from './student/QuizScreen';
@@ -19,13 +19,8 @@ const StudentPanel: React.FC<StudentPanelProps> = ({
   onRegister, 
   onStudentLogin 
 }) => {
-  // ১. localStorage থেকে আগের সেশন চেক করা
-  const [isAuth, setIsAuth] = useState(() => {
-    return localStorage.getItem('student_auth') === 'true';
-  });
-  const [studentName, setStudentName] = useState(() => {
-    return localStorage.getItem('student_name') || '';
-  });
+  const [isAuth, setIsAuth] = useState(() => localStorage.getItem('student_auth') === 'true');
+  const [studentName, setStudentName] = useState(() => localStorage.getItem('student_name') || '');
 
   const [stage, setStage] = useState<'LOGIN' | 'TAKING' | 'RESULT'>('LOGIN');
   const [quizCode, setQuizCode] = useState('');
@@ -37,53 +32,28 @@ const StudentPanel: React.FC<StudentPanelProps> = ({
     score: 0,
     totalMarks: 0,
     timeSpent: 0,
-    pointsEarned: 0
+    pointsEarned: 0,
+    correctCount: 0,
+    wrongCount: 0
   });
 
   const handleNameChange = (val: string) => {
-    if (!isAuth) {
-      setStudentName(val);
-    }
+    if (!isAuth) setStudentName(val);
   };
 
-  // ২. লগইন করার সময় ফ্রিজ বা স্ট্যাটাস চেক করা
   const handleProtectedLogin = async (name: string, pass: string) => {
-    // ডাটাবেস থেকে স্টুডেন্টের লেটেস্ট স্ট্যাটাস আনা
     try {
       const q = query(collection(db, "students"), where("name", "==", name.trim()));
       const snap = await getDocs(q);
 
       if (!snap.empty) {
         const studentData = snap.docs[0].data();
-        
-        // ফ্রিজ চেক
         if (studentData.isFrozen) {
-          let msg = "আপনার অ্যাকাউন্টটি ফ্রিজ করা হয়েছে।";
-          if (studentData.frozenUntil) {
-            msg += ` এটি ${new Date(studentData.frozenUntil).toLocaleDateString('bn-BD')} পর্যন্ত বন্ধ থাকবে।`;
-          }
-          alert(msg);
+          alert(`Account Frozen!`);
           return false;
         }
-
-        // ডিলিট/ইনঅ্যাক্টিভ চেক
-        if (studentData.status === 'inactive') {
-          alert("আপনার অ্যাকাউন্টটি বর্তমানে ইন-অ্যাক্টিভ। এডমিনের সাথে যোগাযোগ করুন।");
-          return false;
-        }
-      } else {
-        // যদি রেজিস্ট্রেশন না থাকে তবে গ্লোবাল লগইন ট্রাই করবে
-        const success = onStudentLogin(name, pass);
-        if (success) {
-          setIsAuth(true);
-          setStudentName(name);
-          localStorage.setItem('student_auth', 'true');
-          localStorage.setItem('student_name', name);
-        }
-        return success;
       }
 
-      // পাসওয়ার্ড ম্যাচিং (যদি লোকাল পাসওয়ার্ড হ্যান্ডেল করেন)
       const success = onStudentLogin(name, pass);
       if (success) {
         setIsAuth(true);
@@ -92,14 +62,11 @@ const StudentPanel: React.FC<StudentPanelProps> = ({
         localStorage.setItem('student_name', name);
       }
       return success;
-
     } catch (error) {
-      console.error("Login Check Error:", error);
       return false;
     }
   };
 
-  // ৩. লগআউট ফাংশন
   const handleLogout = () => {
     localStorage.removeItem('student_auth');
     localStorage.removeItem('student_name');
@@ -108,7 +75,6 @@ const StudentPanel: React.FC<StudentPanelProps> = ({
     onBack();
   };
 
-  // ৪. কুইজ শেষ করে স্টুডেন্ট হোমে ফিরে যাওয়া
   const handleGoToStudentHome = () => {
     setStage('LOGIN');
     setQuizCode('');
@@ -118,34 +84,17 @@ const StudentPanel: React.FC<StudentPanelProps> = ({
 
   const handleStart = async () => {
     const cleanCode = quizCode.trim().toUpperCase();
-    if (!cleanCode) {
-      alert("সঠিক কুইজ কোড দিন!");
-      return;
-    }
-
+    if (!cleanCode) return alert("সঠিক কুইজ কোড দিন!");
     try {
-      const quizzesRef = collection(db, "quizzes");
-      const q = query(quizzesRef, where("code", "==", cleanCode));
-      const querySnapshot = await getDocs(q);
-
-      if (querySnapshot.empty) {
-        alert("ভুল কোড! কোনো পরীক্ষা পাওয়া যায়নি।");
-        return;
-      }
-
-      const docSnap = querySnapshot.docs[0];
+      const q = query(collection(db, "quizzes"), where("code", "==", cleanCode));
+      const snap = await getDocs(q);
+      if (snap.empty) return alert("ভুল কোড!");
+      const docSnap = snap.docs[0];
       const data = docSnap.data();
-
-      setActiveQuiz({
-        id: docSnap.id,
-        ...data
-      });
-
-      const totalTime = Number(data.config?.totalTime || 10);
-      setTimeLeft(totalTime * 60);
+      setActiveQuiz({ id: docSnap.id, ...data });
+      setTimeLeft(Number(data.config?.totalTime || 10) * 60);
       setStage('TAKING');
     } catch (error) {
-      console.error("Fetch Error:", error);
       alert("সার্ভার সমস্যা!");
     }
   };
@@ -160,44 +109,72 @@ const StudentPanel: React.FC<StudentPanelProps> = ({
     return () => clearInterval(timer);
   }, [stage, timeLeft]);
 
+  // ✅ Negative Marking লজিক সহ handleSubmit
   const handleSubmit = async () => {
     if (!activeQuiz) return;
 
     let correctCount = 0;
+    let wrongCount = 0;
+
     activeQuiz.questions.forEach((q: any) => {
       const userAns = String(answers[q.id] || "").trim().toLowerCase();
       const correctAns = String(q.answer || q.correctAnswer || "").trim().toLowerCase();
       
-      // FILL_GAP এবং MCQ উভয়ের জন্য লজিক
-      if (userAns !== "" && userAns === correctAns) {
-        correctCount++;
+      if (userAns !== "") {
+        if (userAns === correctAns) {
+          correctCount++;
+        } else {
+          wrongCount++;
+        }
       }
     });
+
+    // পয়েন্ট ক্যালকুলেশন: (সঠিক * ১) - (ভুল * ০.৫)
+    const rawPoints = (correctCount * 1) - (wrongCount * 0.5);
+    // পয়েন্ট যেন মাইনাস না হয় সেজন্য ০ এর নিচে গেলে ০ করে দেওয়া (ঐচ্ছিক)
+    const finalPoints = Math.max(0, rawPoints);
 
     const totalPossibleMarks = activeQuiz.questions.length;
     const timeSpent = Math.max(1, (Number(activeQuiz.config?.totalTime || 10) * 60) - timeLeft);
 
     const attemptData = {
       studentName: studentName.trim(),
-      score: correctCount,
+      score: correctCount, // লিডারবোর্ডের জন্য শুধু সঠিক সংখ্যা
       totalMarks: totalPossibleMarks,
       submittedAt: new Date().toISOString(),
       timeSpent: timeSpent,
-      answers: { ...answers }
+      answers: { ...answers },
+      earnedPoints: finalPoints,
+      wrongAnswers: wrongCount
     };
 
     setResData({
       score: correctCount,
       totalMarks: totalPossibleMarks,
       timeSpent: timeSpent,
-      pointsEarned: correctCount
+      pointsEarned: finalPoints,
+      correctCount: correctCount,
+      wrongCount: wrongCount
     });
 
     try {
+      // ১. কুইজ অ্যাটেম্পট আপডেট
       const quizRef = doc(db, "quizzes", activeQuiz.id);
       await updateDoc(quizRef, {
         attempts: arrayUnion(attemptData)
       });
+
+      // ২. স্টুডেন্টের টোটাল পয়েন্ট আপডেট
+      const studentQ = query(collection(db, "students"), where("name", "==", studentName.trim()));
+      const studentSnap = await getDocs(studentQ);
+      
+      if (!studentSnap.empty) {
+        const studentDocRef = doc(db, "students", studentSnap.docs[0].id);
+        await updateDoc(studentDocRef, {
+          totalPoints: increment(finalPoints),
+          quizzesPlayed: increment(1)
+        });
+      }
       
       setActiveQuiz((prev: any) => ({
         ...prev,
@@ -206,7 +183,8 @@ const StudentPanel: React.FC<StudentPanelProps> = ({
       
       setStage('RESULT');
     } catch (error) {
-      alert("রেজাল্ট সেভ করতে সমস্যা হয়েছে!");
+      console.error(error);
+      alert("রেজাল্ট সেভ করতে সমস্যা হয়েছে!");
     }
   };
 
@@ -214,14 +192,10 @@ const StudentPanel: React.FC<StudentPanelProps> = ({
     <div className="min-h-screen bg-slate-50 font-['Hind_Siliguri']">
       {stage === 'LOGIN' && (
         <StudentLogin 
-          quizCode={quizCode} 
-          setQuizCode={setQuizCode}
-          studentName={studentName} 
-          setStudentName={handleNameChange}
-          onStart={handleStart} 
-          onBack={handleLogout} 
-          students={students}
-          onRegister={onRegister}
+          quizCode={quizCode} setQuizCode={setQuizCode}
+          studentName={studentName} setStudentName={handleNameChange}
+          onStart={handleStart} onBack={handleLogout} 
+          students={students} onRegister={onRegister}
           onStudentLogin={handleProtectedLogin}
           isAlreadyAuth={isAuth} 
         />
@@ -229,10 +203,8 @@ const StudentPanel: React.FC<StudentPanelProps> = ({
 
       {stage === 'TAKING' && activeQuiz && (
         <QuizScreen 
-          activeQuiz={activeQuiz} 
-          timeLeft={timeLeft}
-          answers={answers} 
-          setAnswers={setAnswers}
+          activeQuiz={activeQuiz} timeLeft={timeLeft}
+          answers={answers} setAnswers={setAnswers}
           onSubmit={handleSubmit}
         />
       )}
@@ -241,10 +213,12 @@ const StudentPanel: React.FC<StudentPanelProps> = ({
         <QuizResult 
           score={resData.score} 
           totalMarks={resData.totalMarks}
-          timeSpent={resData.timeSpent}
+          timeSpent={resData.timeSpent} 
           studentName={studentName}
           onBack={handleGoToStudentHome} 
           leaderboard={activeQuiz.attempts} 
+          earnedPoints={resData.pointsEarned}
+          wrongCount={resData.wrongCount} // রেজাল্টে ভুল উত্তরের সংখ্যা দেখানো
         />
       )}
     </div>
