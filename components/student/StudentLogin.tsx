@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase';
-import { collection, onSnapshot, query } from 'firebase/firestore';
+import { collection, onSnapshot, query, getDocs } from 'firebase/firestore';
 import { StudentTranscriptModal } from '../teacher/StudentTranscriptModal';
 
 // ═══════════════════════════════════════════════════
@@ -356,16 +356,23 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({
   // ── Live data ─────────────────────────────────────────────
   useEffect(() => {
     if (!isLoggedIn || !studentName) return;
-    const unsub = onSnapshot(query(collection(db, 'quizzes')), snap => {
+    // ✅ subcollection থেকে attempts load করো
+    const unsub = onSnapshot(query(collection(db, 'quizzes')), async (snap) => {
       const ptsMap: Record<string, number> = {};
       const myHist: any[] = [];
-      snap.docs.forEach(d => {
+
+      await Promise.all(snap.docs.map(async (d) => {
         const quiz = { id: d.id, ...d.data() } as any;
-        (quiz.attempts || []).forEach((att: any) => {
+        const attSnap = await getDocs(collection(db, 'quizzes', d.id, 'attempts'));
+        const attempts = attSnap.docs.map(a => ({ id: a.id, ...a.data() }));
+
+        attempts.forEach((att: any) => {
           const c   = Number(att.score) || 0;
           const tot = Number(att.totalMarks) || 0;
-          const w   = tot - c;
-          const pts = Math.max(0, c - w * 0.5);
+          const w   = Number(att.wrongAnswers ?? (tot - c)) || 0;
+          const pts = att.earnedPoints !== undefined
+            ? Number(att.earnedPoints)
+            : Math.max(0, c - w * 0.5);
           ptsMap[att.studentName] = (ptsMap[att.studentName] || 0) + pts;
           if (att.studentName?.toLowerCase() === studentName.toLowerCase()) {
             myHist.push({
@@ -376,12 +383,13 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({
             });
           }
         });
-      });
-      const sorted = Object.entries(ptsMap).sort(([, a], [, b]) => b - a);
+      }));
+
+      const sorted = Object.entries(ptsMap).sort(([, a], [, b]) => (b as number) - (a as number));
       const rank   = sorted.findIndex(([n]) => n.toLowerCase() === studentName.toLowerCase()) + 1;
       setTotalPoints(ptsMap[studentName] || 0);
       setGlobalRank(rank > 0 ? rank : sorted.length + 1);
-      setAllStudents(sorted.map(([name, pts]) => ({ name, pts })));
+      setAllStudents(sorted.map(([name, pts]) => ({ name, pts: pts as number })));
       setHistory(myHist.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
     });
     return () => unsub();
@@ -685,9 +693,12 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({
           isExporting={false}
           attemptSheetRef={{ current: null } as any}
           getRankInfo={(att, q) => {
-            const sorted = [...(q.attempts || [])].sort((a: any, b: any) => b.score - a.score);
+            // ✅ fullQuizData.attempts subcollection থেকে ইতিমধ্যে loaded (history তে আছে)
+            const histEntry = history.find(h => h.myAttemptData?.submittedAt === att.submittedAt);
+            const allAttempts = histEntry?.fullQuizData?.attempts || q.attempts || [];
+            const sorted = [...allAttempts].sort((a: any, b: any) => b.score - a.score);
             const r = sorted.findIndex((s: any) => s.submittedAt === att.submittedAt) + 1;
-            return { rank: r, total: sorted.length };
+            return { rank: r || 1, total: sorted.length || 1 };
           }}
         />
       )}
