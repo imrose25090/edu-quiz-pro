@@ -1,9 +1,11 @@
+import React from 'react';
 import SpinWheelGame from './games/SpinWheelGame';
 import MemoryGame from './games/MemoryGame';
 import QuizBattle from './games/QuizBattle';
 import PuzzleGame from './games/PuzzleGame';
 
-export default function GamePage() {
+// ✅ FIX: double export default removed
+const GamePage: React.FC = () => {
   return (
     <div>
       <h1>🎮 Quiz Games</h1>
@@ -13,5 +15,6 @@ export default function GamePage() {
       <PuzzleGame />
     </div>
   );
-}
+};
+
 export default GamePage;
