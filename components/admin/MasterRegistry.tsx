@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { Class, Subject, Chapter, Question, Teacher } from '../../types';
 import { useApp } from "../../store";
 import { db } from "../../firebase";
-import { collection, onSnapshot, doc, updateDoc } from "firebase/firestore";
+import { collection, onSnapshot, doc, updateDoc, getDocs } from "firebase/firestore";
 
 interface MasterRegistryProps {
   activeTab: string;
@@ -45,26 +45,37 @@ const MasterRegistry: React.FC<MasterRegistryProps> = ({
   const liveQuestions = store.questions;
 
   useEffect(() => {
-    const subs: [string, React.Dispatch<React.SetStateAction<any[]>>][] = [
+    const simpleCols: [string, React.Dispatch<React.SetStateAction<any[]>>][] = [
       ['classes',   setLiveClasses],
       ['subjects',  setLiveSubjects],
       ['chapters',  setLiveChapters],
       ['teachers',  setLiveTeachers],
       ['students',  setLiveStudents],
-      ['quizzes',   setLiveQuizzes],
     ];
-    const unsubs = subs.map(([col, setter]) =>
+    const unsubs = simpleCols.map(([col, setter]) =>
       onSnapshot(collection(db, col), snap => {
         setter(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       })
     );
-    return () => unsubs.forEach(u => u());
+
+    // ✅ quizzes — attempts subcollection সহ load করো
+    const quizUnsub = onSnapshot(collection(db, 'quizzes'), async (snap) => {
+      const quizzes = await Promise.all(
+        snap.docs.map(async (d) => {
+          const quiz = { id: d.id, ...d.data(), attempts: [] as any[] };
+          const attSnap = await getDocs(collection(db, 'quizzes', d.id, 'attempts'));
+          quiz.attempts = attSnap.docs.map(a => ({ id: a.id, ...a.data() }));
+          return quiz;
+        })
+      );
+      setLiveQuizzes(quizzes);
+    });
+
+    return () => { unsubs.forEach(u => u()); quizUnsub(); };
   }, []);
 
   // ── Debug log (remove after fix confirmed) ──────────────
   useEffect(() => {
-    console.log('[MasterRegistry] store.questions count:', store.questions.length);
-    console.log('[MasterRegistry] sample:', store.questions[0]);
   }, [store.questions]);
 
   // ── Real-time student stats from quizzes ──────────────────
@@ -76,7 +87,10 @@ const MasterRegistry: React.FC<MasterRegistryProps> = ({
         if (!name) return;
         const c   = Number(att.score) || 0;
         const tot = Number(att.totalMarks) || 0;
-        const pts = Math.max(0, c - (tot - c) * 0.5);
+        // earnedPoints Firebase এ saved থাকলে সেটাই নাও (bonus সহ)
+        const pts = att.earnedPoints !== undefined
+          ? Number(att.earnedPoints)
+          : Math.max(0, c - (tot - c) * 0.5);
         if (!map[name]) map[name] = { points: 0, quizCount: 0 };
         map[name].points    += pts;
         map[name].quizCount += 1;
@@ -103,7 +117,9 @@ const MasterRegistry: React.FC<MasterRegistryProps> = ({
 
       attempts.forEach((att: any) => {
         const sub = att.submittedAt ? new Date(att.submittedAt) : null;
-        const pts = Math.max(0, (Number(att.score) || 0) - ((Number(att.totalMarks) || 0) - (Number(att.score) || 0)) * 0.5);
+        const pts = att.earnedPoints !== undefined
+          ? Number(att.earnedPoints)
+          : Math.max(0, (Number(att.score) || 0) - ((Number(att.totalMarks) || 0) - (Number(att.score) || 0)) * 0.5);
         if (sub && sub >= week)  wP += pts;
         if (sub && sub >= month) mP += pts;
       });
@@ -147,7 +163,9 @@ const MasterRegistry: React.FC<MasterRegistryProps> = ({
         });
         if (si >= 0) {
           days[si].attempts += 1;
-          days[si].points += Math.max(0, (Number(att.score)||0) - ((Number(att.totalMarks)||0) - (Number(att.score)||0)) * 0.5);
+          days[si].points += att.earnedPoints !== undefined
+            ? Number(att.earnedPoints)
+            : Math.max(0, (Number(att.score)||0) - ((Number(att.totalMarks)||0) - (Number(att.score)||0)) * 0.5);
         }
       });
     });
@@ -185,20 +203,21 @@ const MasterRegistry: React.FC<MasterRegistryProps> = ({
     return result;
   }, [liveQuizzes]);
 
-  // ── Auto-clean duplicates from a quiz ────────────────────
+  // ── Auto-clean duplicates from a quiz (subcollection version) ─
   const cleanDuplicates = async (quizId: string) => {
     const quiz = liveQuizzes.find(q => q.id === quizId);
     if (!quiz) return;
     const attempts: any[] = [...(quiz.attempts || [])];
-    const seen: Record<string, boolean> = {};
-    const cleaned = attempts.filter(att => {
+    const seen: Record<string, string> = {}; // name → keep id
+    for (const att of attempts) {
       const n = att.studentName || 'Unknown';
-      if (seen[n]) return false;
-      seen[n] = true;
-      return true;
-    });
-    if (cleaned.length < attempts.length) {
-      await updateDoc(doc(db, 'quizzes', quizId), { attempts: cleaned });
+      if (seen[n]) {
+        // duplicate — delete থেকে subcollection
+        const { deleteDoc } = await import('firebase/firestore');
+        await deleteDoc(doc(db, 'quizzes', quizId, 'attempts', att.id));
+      } else {
+        seen[n] = att.id;
+      }
     }
   };
 
@@ -867,7 +886,9 @@ const MasterRegistry: React.FC<MasterRegistryProps> = ({
                       (q.attempts || []).forEach((att: any) => {
                         const sub = att.submittedAt ? new Date(att.submittedAt) : null;
                         if (!sub || sub < month) return;
-                        const pts = Math.max(0, (Number(att.score)||0) - ((Number(att.totalMarks)||0) - (Number(att.score)||0)) * 0.5);
+                        const pts = att.earnedPoints !== undefined
+                          ? Number(att.earnedPoints)
+                          : Math.max(0, (Number(att.score)||0) - ((Number(att.totalMarks)||0) - (Number(att.score)||0)) * 0.5);
                         mPts[att.studentName] = (mPts[att.studentName] || 0) + pts;
                       });
                     });
