@@ -44,18 +44,18 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
     const loadFormats = () => {
       const saved = JSON.parse(localStorage.getItem('quiz_formats') || '[]');
       setDynamicFormats(saved);
-      if (saved.length > 0 && !selType) {
-        setSelType(saved[0].name);
+      if (saved.length > 0) {
+        setSelType(prev => prev || saved[0].type);
       }
     };
     loadFormats();
     
     window.addEventListener('storage', loadFormats);
     return () => window.removeEventListener('storage', loadFormats);
-  }, [selType]);
+  }, []);
 
   const currentFormat = useMemo(() => 
-    dynamicFormats.find(f => f.name === selType), 
+    dynamicFormats.find(f => f.type === selType), 
   [selType, dynamicFormats]);
 
   const handleCopyFormat = () => {
@@ -129,7 +129,7 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
     const newQs = lines.map(line => {
       const parts = line.split('|').map(p => p.trim());
       const needsInput = currentFormat?.requiresInput || false;
-      const questionType = currentFormat?.name || selType; 
+      const questionType = currentFormat?.type || selType;
 
       let options: string[] = [];
       let answer: string = "";
@@ -204,7 +204,7 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
               </div>
               
               <select value={selType} onChange={(e) => {setSelType(e.target.value); setSelectedIds([]);}} className="w-full p-4 bg-indigo-50 text-indigo-600 rounded-2xl font-bold outline-none border-2 border-indigo-100 cursor-pointer">
-                {dynamicFormats.map((f: any) => <option key={f.id} value={f.name}>{f.name}</option>)}
+                {dynamicFormats.map((f: any) => <option key={f.id} value={f.type}>{f.name}</option>)}
               </select>
 
               {currentFormat && (
