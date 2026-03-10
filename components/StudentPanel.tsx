@@ -113,6 +113,19 @@ const StudentPanel: React.FC<StudentPanelProps> = ({
       if (snap.empty) return alert("ভুল কোড!");
       const docSnap = snap.docs[0];
       const data = docSnap.data();
+
+      // ✅ আগে দিয়েছে কিনা check — subcollection এ studentName খোঁজো
+      const prevAttempt = await getDocs(
+        query(
+          collection(db, "quizzes", docSnap.id, "attempts"),
+          where("studentName", "==", studentNameRef.current.trim())
+        )
+      );
+      if (!prevAttempt.empty) {
+        alert("❌ তুমি এই quiz আগেই দিয়েছ!\n\nএকটি quiz একবারই দেওয়া যাবে।");
+        return;
+      }
+
       hasSubmitted.current = false;
       setActiveQuiz({ id: docSnap.id, ...data });
       setTimeLeft(Number(data.config?.totalTime || 10) * 60);
@@ -142,7 +155,11 @@ const StudentPanel: React.FC<StudentPanelProps> = ({
     });
 
     const basePoints  = Math.max(0, correctCount - wrongCount * 0.5);
-    const bonusPoints = Math.floor(curTimeLeft / 60);
+    const scorePercent = quiz.questions.length > 0
+      ? (correctCount / quiz.questions.length) * 100
+      : 0;
+    // ✅ শুধু ৯০%+ পেলে speed bonus পাবে
+    const bonusPoints = scorePercent >= 90 ? Math.floor(curTimeLeft / 60) : 0;
     const finalPoints = basePoints + bonusPoints;
     const totalPossibleMarks = quiz.questions.length;
     const timeSpent = Math.max(1, (Number(quiz.config?.totalTime || 10) * 60) - curTimeLeft);
@@ -166,7 +183,20 @@ const StudentPanel: React.FC<StudentPanelProps> = ({
     });
 
     try {
-      // ✅ arrayUnion এর বদলে subcollection এ আলাদা document
+      // ✅ Double-submit guard — Firebase এ আবার check করো
+      const existingSnap = await getDocs(
+        query(
+          collection(db, "quizzes", quiz.id, "attempts"),
+          where("studentName", "==", curName.trim())
+        )
+      );
+      if (!existingSnap.empty) {
+        console.warn('[Submit] Duplicate blocked at submit time');
+        setStage('RESULT'); // result দেখাও, save করবে না
+        return;
+      }
+
+      // ✅ subcollection এ আলাদা document
       await addDoc(
         collection(db, 'quizzes', quiz.id, 'attempts'),
         attemptData
