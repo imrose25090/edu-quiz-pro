@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { Class, Subject, Chapter, Question, Teacher } from '../../types';
 import { useApp } from "../../store";
 import { db } from "../../firebase";
-import { collection, onSnapshot, doc, updateDoc, getDocs } from "firebase/firestore";
+import { collection, onSnapshot, doc, updateDoc, getDocs, deleteDoc, query, where } from "firebase/firestore";
 
 interface MasterRegistryProps {
   activeTab: string;
@@ -37,9 +37,11 @@ const MasterRegistry: React.FC<MasterRegistryProps> = ({
   const [liveClasses,   setLiveClasses]   = useState<any[]>(classes);
   const [liveSubjects,  setLiveSubjects]  = useState<any[]>(subjects);
   const [liveChapters,  setLiveChapters]  = useState<any[]>(chapters);
-  const [liveTeachers,  setLiveTeachers]  = useState<any[]>(teachers);
-  const [liveStudents,  setLiveStudents]  = useState<any[]>(students);
-  const [liveQuizzes,   setLiveQuizzes]   = useState<any[]>([]);
+  const [liveTeachers,    setLiveTeachers]    = useState<any[]>(teachers);
+  const [liveStudents,    setLiveStudents]    = useState<any[]>(students);
+  const [liveQuizzes,     setLiveQuizzes]     = useState<any[]>([]);
+  const [securityAlerts,  setSecurityAlerts]  = useState<any[]>([]);
+  const [showAlerts,      setShowAlerts]      = useState(false);
 
   // ── questions সরাসরি store থেকে (store.tsx-এ orderBy দিয়ে ঠিকমতো fetch হচ্ছে) ──
   const liveQuestions = store.questions;
@@ -71,7 +73,13 @@ const MasterRegistry: React.FC<MasterRegistryProps> = ({
       setLiveQuizzes(quizzes);
     });
 
-    return () => { unsubs.forEach(u => u()); quizUnsub(); };
+    // ✅ Security alerts real-time listener
+    const alertUnsub = onSnapshot(
+      query(collection(db, 'securityAlerts'), where('resolved', '==', false)),
+      snap => setSecurityAlerts(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    );
+
+    return () => { unsubs.forEach(u => u()); quizUnsub(); alertUnsub(); };
   }, []);
 
   // ── Debug log (remove after fix confirmed) ──────────────
@@ -213,7 +221,6 @@ const MasterRegistry: React.FC<MasterRegistryProps> = ({
       const n = att.studentName || 'Unknown';
       if (seen[n]) {
         // duplicate — delete থেকে subcollection
-        const { deleteDoc } = await import('firebase/firestore');
         await deleteDoc(doc(db, 'quizzes', quizId, 'attempts', att.id));
       } else {
         seen[n] = att.id;
@@ -440,6 +447,83 @@ const MasterRegistry: React.FC<MasterRegistryProps> = ({
                         className="text-[10px] font-black bg-rose-500 text-white px-3 py-1 rounded-lg hover:bg-rose-700 transition-all">
                         Fix
                       </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ══ Security Alert ════════════════════════════════════ */}
+      {securityAlerts.length > 0 && (
+        <div className="mx-8 mb-0 mt-3">
+          <button onClick={() => setShowAlerts(!showAlerts)}
+            className="w-full bg-amber-500 hover:bg-amber-600 text-white rounded-2xl px-5 py-3 flex justify-between items-center transition-all">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">🔐</span>
+              <div className="text-left">
+                <p className="font-black text-sm uppercase tracking-tight">Suspicious Login Detected</p>
+                <p className="text-amber-100 text-[10px] font-bold">{securityAlerts.length}টা teacher account শেয়ার হতে পারে</p>
+              </div>
+            </div>
+            <span className="text-[10px] font-black bg-white/20 px-3 py-1 rounded-full">
+              {showAlerts ? 'লুকাও ▲' : 'দেখো ▼'}
+            </span>
+          </button>
+
+          {showAlerts && (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl mt-2 overflow-hidden">
+              <div className="flex justify-between items-center px-5 py-3 border-b border-amber-100">
+                <p className="text-xs font-black text-amber-700 uppercase">Duplicate Login Alerts</p>
+                <button
+                  onClick={async () => {
+                    for (const a of securityAlerts) {
+                      await updateDoc(doc(db, 'securityAlerts', a.id), { resolved: true });
+                    }
+                  }}
+                  className="text-[10px] font-black bg-amber-500 text-white px-4 py-1.5 rounded-xl hover:bg-amber-700 transition-all">
+                  ✅ সব Dismiss করো
+                </button>
+              </div>
+              <div className="divide-y divide-amber-100 max-h-72 overflow-y-auto">
+                {securityAlerts.map((alert) => (
+                  <div key={alert.id} className="px-5 py-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1">
+                        <p className="font-black text-slate-800 text-sm">👤 {alert.teacherName}</p>
+                        <p className="text-[11px] text-slate-500 mt-1">
+                          আগের login: <span className="font-bold text-amber-600">{alert.prevLoginAt ? new Date(alert.prevLoginAt).toLocaleString('bn-BD') : '—'}</span>
+                        </p>
+                        <p className="text-[11px] text-slate-500">
+                          নতুন device: <span className="font-mono text-[10px] text-slate-600 break-all">{alert.newDevice?.substring(0, 60)}...</span>
+                        </p>
+                        <p className="text-[11px] text-amber-700 font-bold mt-1">
+                          ⚠️ একই account এ দুটো ভিন্ন জায়গা থেকে login হয়েছে
+                        </p>
+                      </div>
+                      <div className="flex flex-col gap-2 shrink-0">
+                        <button
+                          onClick={async () => {
+                            // Teacher এর session token clear করো → force logout
+                            await updateDoc(doc(db, 'teachers', alert.teacherId), {
+                              sessionToken: null,
+                              lastLoginAt: null,
+                            });
+                            await updateDoc(doc(db, 'securityAlerts', alert.id), { resolved: true });
+                          }}
+                          className="text-[10px] font-black bg-rose-500 text-white px-3 py-1.5 rounded-xl hover:bg-rose-700 transition-all whitespace-nowrap">
+                          🚫 Force Logout
+                        </button>
+                        <button
+                          onClick={async () => {
+                            await updateDoc(doc(db, 'securityAlerts', alert.id), { resolved: true });
+                          }}
+                          className="text-[10px] font-black bg-slate-200 text-slate-600 px-3 py-1.5 rounded-xl hover:bg-slate-300 transition-all">
+                          Dismiss
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
