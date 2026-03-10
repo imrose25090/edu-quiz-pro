@@ -4,7 +4,7 @@ import { Quiz, Teacher, QuizAttempt } from '../types';
 
 // Firebase
 import { db } from '../firebase';
-import { collection, addDoc, onSnapshot, query, where, serverTimestamp } from "firebase/firestore";
+import { collection, collectionGroup, addDoc, onSnapshot, query, where, orderBy, getDocs, serverTimestamp } from "firebase/firestore";
 
 // Sub-components
 import { TeacherLogin } from './teacher/TeacherLogin';
@@ -16,9 +16,10 @@ import { StudentTranscriptModal } from './teacher/StudentTranscriptModal';
 interface TeacherPanelProps {
   onBack: () => void;
   loggedInTeacher?: Teacher | null;
+  onLoginSuccess?: (teacher: Teacher) => void; // App.tsx state update এর জন্য
 }
 
-const TeacherPanel: React.FC<TeacherPanelProps> = ({ onBack, loggedInTeacher }) => {
+const TeacherPanel: React.FC<TeacherPanelProps> = ({ onBack, loggedInTeacher, onLoginSuccess }) => {
   const { classes, subjects, chapters, questions, teachers, t } = useApp();
 
   const [activeTeacher, setActiveTeacher] = useState<Teacher | null>(loggedInTeacher || null);
@@ -72,15 +73,27 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({ onBack, loggedInTeacher }) 
   useEffect(() => {
     if (!activeTeacher) return;
     const q = query(collection(db, "quizzes"), where("teacherId", "==", activeTeacher.id));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Quiz[];
-      setFirebaseQuizzes(list.sort((a, b) => {
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      // ✅ প্রতিটা quiz এর attempts subcollection থেকে load করো
+      const list = await Promise.all(
+        snapshot.docs.map(async (d) => {
+          const quiz = { id: d.id, ...d.data(), attempts: [] as any[] };
+          const attSnap = await getDocs(
+            query(collection(db, 'quizzes', d.id, 'attempts'), orderBy('score', 'desc'))
+          );
+          quiz.attempts = attSnap.docs.map(a => ({ id: a.id, ...a.data() }));
+          return quiz;
+        })
+      ) as Quiz[];
+
+      const sorted = list.sort((a, b) => {
         const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
         const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
         return dateB - dateA;
-      }));
+      });
+      setFirebaseQuizzes(sorted);
       if (selectedQuiz) {
-        const updated = list.find(qz => qz.id === selectedQuiz.id);
+        const updated = sorted.find(qz => qz.id === selectedQuiz.id);
         if (updated) setSelectedQuiz(updated);
       }
     });
@@ -93,6 +106,8 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({ onBack, loggedInTeacher }) 
     if (foundTeacher && String(foundTeacher.pin).trim() === String(pinInput).trim()) {
       setView('LIST');
       setLoginError(false);
+      // App.tsx কে জানাও যাতে loggedInTeacher state update হয়
+      if (onLoginSuccess && foundTeacher) onLoginSuccess(foundTeacher);
     } else {
       setLoginError(true);
       setPinInput('');
@@ -176,7 +191,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({ onBack, loggedInTeacher }) 
         classId: newQuiz.classId,
         subjectId: newQuiz.subjectId,
         questions: sortedQuestions,
-        attempts: [],
+        // ✅ attempts field removed — subcollection এ store হবে
         createdAt: new Date().toISOString(),
         timestamp: serverTimestamp(),
         config: {
