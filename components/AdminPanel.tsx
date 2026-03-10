@@ -3,17 +3,17 @@ import { useApp } from '../store';
 import { db } from "../firebase";
 import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
 
-// সাব-কম্পোনেন্ট ইমপোর্ট - পাথ নিশ্চিত করা হয়েছে (যদি AdminPanel 'admin' ফোল্ডারের বাইরে থাকে)
-import { AdminTabs } from './admin/AdminTabs';
+// সাব-কম্পোনেন্ট ইমপোর্ট
+import AdminTabs from './admin/AdminTabs';
 import { ClassManager } from './admin/ClassManager';
-import { SubjectManager } from './admin/SubjectManager';
-import { ChapterManager } from './admin/ChapterManager';
-import { QuestionManager } from './admin/QuestionManager';
-import { FormatSettings } from './admin/FormatSettings';
-import { TeacherManagement } from './admin/TeacherManagement';
+import SubjectManager from './admin/SubjectManager';
+import ChapterManager from './admin/ChapterManager';
+import QuestionManager from './admin/QuestionManager';
+import FormatSettings from './admin/FormatSettings';
+import TeacherManagement from './admin/TeacherManagement';
 import { SystemSettings } from './admin/SystemSettings';
-import { PassageModal } from './admin/PassageModal';
-import { MasterRegistry } from './admin/MasterRegistry'; 
+import PassageModal from './admin/PassageModal';
+import MasterRegistry from './admin/MasterRegistry'; 
 
 const AdminPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const store = useApp();
@@ -51,7 +51,7 @@ const AdminPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     { id: 'TEACHERS', label: 'Teachers', icon: '👨‍🏫' },
     { id: 'QUESTIONS', label: 'Questions', icon: '📝' },
     { id: 'REGISTRY', label: 'Registry', icon: '👥' }, 
-    { id: 'FORMATS', label: 'Formats', icon: '📋' }, // Formats ট্যাব যুক্ত করা হলো
+    { id: 'FORMATS', label: 'Formats', icon: '📋' },
     { id: 'SYSTEM', label: 'System/Reports', icon: '⚙️' }
   ];
 
@@ -81,13 +81,14 @@ const AdminPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           />
         </div>
 
-        {/* কন্টেন্ট এরিয়া */}
+        {/* Content Area */}
         <div className="mt-8 transition-all duration-300">
           {activeTab === 'CLASSES' && (
             <ClassManager 
               classes={store.classes} 
               bulkAdd={store.bulkAddClasses} 
               deleteItem={store.deleteClass} 
+              bulkDelete={store.bulkDelete} // ✅ যুক্ত করা হয়েছে
             />
           )}
 
@@ -97,8 +98,9 @@ const AdminPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
               subjects={store.subjects} 
               selectedClassId={selectedClassId}
               setSelectedClassId={setSelectedClassId}
-              bulkAdd={store.bulkAddSubjects} 
-              deleteItem={store.deleteSubject}
+              addSubject={store.bulkAddSubjects} 
+              deleteSubject={store.deleteSubject}
+              bulkDelete={store.bulkDelete} // ✅ যুক্ত করা হয়েছে
             />
           )}
 
@@ -113,6 +115,7 @@ const AdminPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
               setSelectedSubjectId={setSelectedSubjectId}
               bulkAdd={store.bulkAddChapters}
               deleteItem={store.deleteChapter}
+              bulkDelete={store.bulkDelete} // ✅ যুক্ত করা হয়েছে
               setEditingChapterPassage={(id: string) => {
                 const ch = store.chapters.find(c => c.id === id);
                 setEditingChapterPassage(id); 
@@ -128,8 +131,9 @@ const AdminPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
               subjects={store.subjects}
               chapters={store.chapters}
               questions={store.questions}
-              bulkAdd={store.addBulkQuestions}
-              deleteItem={store.deleteQuestion}
+              addBulkQuestions={store.addBulkQuestions}
+              deleteQuestion={store.deleteQuestion}
+              bulkDelete={store.bulkDelete} // ✅ যুক্ত করা হয়েছে
               deleteAllQuestions={store.deleteAllQuestions}
             />
           )}
@@ -140,6 +144,7 @@ const AdminPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                bulkAddTeachers={store.bulkAddTeachers}
                deleteTeacher={store.deleteTeacher}
                updateTeacher={store.updateTeacher}
+               bulkDelete={store.bulkDelete} // ✅ যুক্ত করা হয়েছে
             />
           )}
 
@@ -163,10 +168,8 @@ const AdminPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
               updateTeacher={store.updateTeacher}
               updateStudent={store.updateStudent} 
               deleteStudent={store.deleteStudent} 
+              bulkDelete={store.bulkDelete} // ✅ যুক্ত করা হয়েছে
 
-              setEditingChapterPassage={setEditingChapterPassage}
-              setPassageInput={setPassageInput}
-              generateRandomPin={() => Math.floor(1000 + Math.random() * 9000).toString()}
             />
           )}
 
