@@ -11,17 +11,46 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children, role, onGoHome, onOpenBank, isBankOpen }) => {
-  const { language, setLanguage, t } = useApp();
+  // ✅ store থেকে impersonatedUser এবং setImpersonatedUser আনা হলো
+  const { language, setLanguage, t, impersonatedUser, setImpersonatedUser } = useApp();
 
-  // সিম্পল করে দিলাম — সরাসরি Home-এ যাবে
   const handleInternalGoHome = () => {
     onGoHome();
   };
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
+      
+      {/* ✅ ১. অ্যাডমিন ইম্পারসোনেশন নোটিশ বার (শুধুমাত্র যখন অ্যাডমিন অন্য প্রোফাইলে থাকবে) */}
+      {impersonatedUser && (
+        <div className="bg-rose-600 text-white px-4 py-2 flex justify-between items-center sticky top-0 z-[60] shadow-lg animate-in slide-in-from-top duration-300">
+          <div className="flex items-center space-x-2 max-w-7xl mx-auto w-full justify-between px-4">
+             <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                </span>
+                <p className="text-[10px] md:text-xs font-black uppercase tracking-widest">
+                  {language === 'bn' ? 'অ্যাডমিন ভিউ: আপনি এখন দেখছেন - ' : 'Admin View: Impersonating - '} 
+                  <span className="underline decoration-2 underline-offset-4 ml-1">{impersonatedUser.name}</span>
+                </p>
+             </div>
+             
+             <button 
+                onClick={() => setImpersonatedUser(null)}
+                className="bg-white text-rose-600 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase shadow-sm hover:bg-rose-50 transition-colors flex items-center gap-2"
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z" />
+                </svg>
+                {language === 'bn' ? 'অ্যাডমিন প্যানেলে ফিরুন' : 'Back to Admin'}
+              </button>
+          </div>
+        </div>
+      )}
+
       {/* Header / Navigation */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
+      <header className={`bg-white border-b border-slate-200 sticky z-50 ${impersonatedUser ? 'top-[44px]' : 'top-0'}`}>
         <div className="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
           <div 
             className="flex items-center space-x-3 cursor-pointer group" 
@@ -42,8 +71,8 @@ const Layout: React.FC<LayoutProps> = ({ children, role, onGoHome, onOpenBank, i
           </div>
 
           <div className="flex items-center space-x-3 md:space-x-4">
-            {/* Explicit Home Button - visible when not on landing page */}
-            {(role || isBankOpen) && (
+            {/* Explicit Home Button */}
+            {(role || isBankOpen || impersonatedUser) && (
               <button 
                 onClick={handleInternalGoHome}
                 className="hidden sm:flex items-center space-x-2 px-4 py-2 rounded-xl bg-slate-100 text-slate-600 font-black text-[10px] uppercase tracking-widest border border-slate-200 hover:bg-slate-200 transition-all"
