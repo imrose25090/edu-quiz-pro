@@ -9,6 +9,7 @@ import {
 import { Class, Subject, Chapter, Question, Teacher, Quiz } from './types';
 import { translations, Language } from './translations';
 
+// ১. অ্যাপের গ্লোবাল স্টেটের ইন্টারফেস
 interface AppState {
   classes: Class[];
   subjects: Subject[];
@@ -19,27 +20,26 @@ interface AppState {
   quizzes: Quiz[];
   language: Language;
   loading: boolean;
+  // বর্তমানে অ্যাডমিন কোন ইউজার হিসেবে লগইন করে আছেন (Impersonation)
   impersonatedUser: any | null; 
 }
 
+// ২. কনটেক্সট টাইপ (স্টেট + ফাংশনসমূহ)
 interface AppContextType extends AppState {
-  bulkAddClasses:    (names: string[]) => Promise<void>;
-  bulkAddSubjects:   (data: any[]) => Promise<void>;
-  bulkAddChapters:   (data: any[]) => Promise<void>;
-  addBulkQuestions:  (newQuestions: any[]) => Promise<void>;
-  bulkAddTeachers:   (data: any[]) => Promise<void>;
-  updateTeacher:     (id: string, data: any) => Promise<void>;
-  deleteTeacher:     (id: string) => Promise<void>;
-  updateStudent:     (id: string, data: any) => Promise<void>;
-  deleteStudent:     (id: string) => Promise<void>;
-  bulkDelete:        (collectionName: string, ids: string[]) => Promise<void>;
-  deleteClass:       (id: string) => Promise<void>;
-  deleteSubject:     (id: string) => Promise<void>;
-  deleteChapter:     (id: string) => Promise<void>;
-  updateChapter:     (id: string, data: any) => Promise<void>;
-  deleteQuestion:    (id: string) => Promise<void>;
-  deleteAllQuestions:() => Promise<void>;
-  setLanguage:       (lang: Language) => void;
+  bulkAddClasses: (names: string[]) => Promise<void>;
+  bulkAddSubjects: (data: any[]) => Promise<void>;
+  bulkAddChapters: (data: any[]) => Promise<void>;
+  addBulkQuestions: (newQuestions: any[]) => Promise<void>;
+  bulkAddTeachers: (data: any[]) => Promise<void>;
+  updateTeacher: (id: string, data: any) => Promise<void>;
+  deleteTeacher: (id: string) => Promise<void>;
+  updateStudent: (id: string, data: any) => Promise<void>;
+  deleteStudent: (id: string) => Promise<void>;
+  bulkDelete: (collectionName: string, ids: string[]) => Promise<void>;
+  deleteClass: (id: string) => Promise<void>;
+  deleteQuestion: (id: string) => Promise<void>;
+  deleteAllQuestions: () => Promise<void>;
+  setLanguage: (lang: Language) => void;
   setImpersonatedUser: (user: any | null) => void;
   t: (key: keyof typeof translations['en']) => string;
 }
@@ -48,107 +48,113 @@ const AppContext = createContext<AppContextType | null>(null);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, setState] = useState<AppState>({
-    classes: [], subjects: [], chapters: [], questions: [],
-    teachers: [], students: [], quizzes: [], 
-    language: 'bn', loading: true, impersonatedUser: null 
+    classes: [], 
+    subjects: [], 
+    chapters: [], 
+    questions: [],
+    teachers: [], 
+    students: [], 
+    quizzes: [], 
+    language: 'bn',
+    loading: true,
+    impersonatedUser: null 
   });
 
+  // ৩. রিয়েল-টাইম ডাটা লিসেনার (Firebase sync)
   useEffect(() => {
     setState(p => ({ ...p, loading: true }));
 
     const unsubscribers = [
-      onSnapshot(query(collection(db, "classes"),   orderBy("createdAt", "asc")),  (s) => 
-        setState(p => ({ ...p, classes:   s.docs.map(d => ({ id: d.id, ...d.data() } as Class)) }))),
+      onSnapshot(query(collection(db, "classes"), orderBy("createdAt", "asc")), (s) => 
+        setState(p => ({ ...p, classes: s.docs.map(d => ({ id: d.id, ...d.data() } as Class)) }))),
       
-      onSnapshot(query(collection(db, "subjects"),  orderBy("createdAt", "asc")),  (s) => 
-        setState(p => ({ ...p, subjects:  s.docs.map(d => ({ id: d.id, ...d.data() } as Subject)) }))),
+      onSnapshot(query(collection(db, "subjects"), orderBy("createdAt", "asc")), (s) => 
+        setState(p => ({ ...p, subjects: s.docs.map(d => ({ id: d.id, ...d.data() } as Subject)) }))),
       
-      onSnapshot(query(collection(db, "chapters"),  orderBy("createdAt", "asc")),  (s) => 
-        setState(p => ({ ...p, chapters:  s.docs.map(d => ({ id: d.id, ...d.data() } as Chapter)) }))),
+      onSnapshot(query(collection(db, "chapters"), orderBy("createdAt", "asc")), (s) => 
+        setState(p => ({ ...p, chapters: s.docs.map(d => ({ id: d.id, ...d.data() } as Chapter)) }))),
 
       onSnapshot(query(collection(db, "questions"), orderBy("createdAt", "desc")), (s) => 
         setState(p => ({ ...p, questions: s.docs.map(d => ({ id: d.id, ...d.data() } as Question)) }))),
 
-      onSnapshot(query(collection(db, "teachers"),  orderBy("createdAt", "desc")), (s) => 
-        setState(p => ({ ...p, teachers:  s.docs.map(d => ({ id: d.id, ...d.data() } as Teacher)) }))),
+      onSnapshot(query(collection(db, "teachers"), orderBy("createdAt", "desc")), (s) => 
+        setState(p => ({ ...p, teachers: s.docs.map(d => ({ id: d.id, ...d.data() } as Teacher)) }))),
 
       onSnapshot(collection(db, "students"), (s) => 
-        setState(p => ({ ...p, students:  s.docs.map(d => ({ id: d.id, ...d.data() })) }))),
+        setState(p => ({ ...p, students: s.docs.map(d => ({ id: d.id, ...d.data() })) }))),
 
-      onSnapshot(query(collection(db, "quizzes"),   orderBy("createdAt", "desc")), (s) => 
-        setState(p => ({ ...p, quizzes:   s.docs.map(d => ({ id: d.id, ...d.data() } as Quiz)) })))
+      onSnapshot(query(collection(db, "quizzes"), orderBy("createdAt", "desc")), (s) => 
+        setState(p => ({ ...p, quizzes: s.docs.map(d => ({ id: d.id, ...d.data() } as Quiz)) })))
     ];
     
+    // ডাটা লোড হওয়ার জন্য সামান্য ডিলে
     const timer = setTimeout(() => setState(p => ({ ...p, loading: false })), 800);
-    return () => { unsubscribers.forEach(u => u()); clearTimeout(timer); };
+    
+    return () => {
+      unsubscribers.forEach(unsub => unsub());
+      clearTimeout(timer);
+    };
   }, []);
 
+  // ৪. ট্রান্সলেশন হেল্পার
   const t = (key: keyof typeof translations['en']) => {
     const langSet = translations[state.language] || translations['en'];
     return langSet[key] || key;
   };
 
-  const setImpersonatedUser = (user: any | null) => setState(p => ({ ...p, impersonatedUser: user }));
+  // ৫. ম্যানেজমেন্ট ফাংশনসমূহ (Firebase Operations)
+  const setImpersonatedUser = (user: any | null) => {
+    setState(p => ({ ...p, impersonatedUser: user }));
+  };
 
-  // ── Classes ───────────────────────────────────────────────
   const bulkAddClasses = async (names: string[]) => {
     const batch = writeBatch(db);
     const now = Date.now(); 
     names.forEach((name, i) => {
       if (name.trim()) {
-        batch.set(doc(collection(db, "classes")), { 
+        const docRef = doc(collection(db, "classes"));
+        batch.set(docRef, { 
           name: name.trim(), 
-          createdAt: Timestamp.fromMillis(now + i * 100)
+          createdAt: Timestamp.fromMillis(now + (i * 100)) 
         });
       }
     });
     await batch.commit();
   };
 
-  const deleteClass = async (id: string) => await deleteDoc(doc(db, "classes", id));
-
-  // ── Subjects ──────────────────────────────────────────────
   const bulkAddSubjects = async (data: any[]) => {
     const batch = writeBatch(db);
     const now = Date.now();
     data.forEach((item, i) => {
-      batch.set(doc(collection(db, "subjects")), { 
-        ...item,
-        classId: String(item.classId),
-        createdAt: Timestamp.fromMillis(now + i * 100)
+      const docRef = doc(collection(db, "subjects"));
+      batch.set(docRef, { 
+        ...item, 
+        createdAt: Timestamp.fromMillis(now + (i * 100)) 
       });
     });
     await batch.commit();
   };
 
-  const deleteSubject = async (id: string) => await deleteDoc(doc(db, "subjects", id));
-
-  // ── Chapters ──────────────────────────────────────────────
   const bulkAddChapters = async (data: any[]) => {
     const batch = writeBatch(db);
     const now = Date.now();
     data.forEach((item, i) => {
-      batch.set(doc(collection(db, "chapters")), { 
-        ...item,
-        classId:   String(item.classId),
-        subjectId: String(item.subjectId),
-        createdAt: Timestamp.fromMillis(now + i * 100)
+      const docRef = doc(collection(db, "chapters"));
+      batch.set(docRef, { 
+        ...item, 
+        createdAt: Timestamp.fromMillis(now + (i * 100)) 
       });
     });
     await batch.commit();
   };
 
-  const deleteChapter = async (id: string) => await deleteDoc(doc(db, "chapters", id));
-
-  const updateChapter = async (id: string, data: any) => await updateDoc(doc(db, "chapters", id), data);
-
-  // ── Questions ─────────────────────────────────────────────
   const addBulkQuestions = async (newQuestions: any[]) => {
     const batch = writeBatch(db);
     newQuestions.forEach(q => {
-      batch.set(doc(collection(db, "questions")), { 
+      const docRef = doc(collection(db, "questions"));
+      batch.set(docRef, { 
         ...q, 
-        classId:   String(q.classId),
+        classId: String(q.classId),
         subjectId: String(q.subjectId),
         chapterId: String(q.chapterId),
         createdAt: serverTimestamp() 
@@ -157,20 +163,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await batch.commit();
   };
 
-  const deleteQuestion    = async (id: string) => await deleteDoc(doc(db, "questions", id));
-
-  const deleteAllQuestions = async () => {
-    const snap = await getDocs(collection(db, "questions"));
-    const batch = writeBatch(db);
-    snap.forEach(d => batch.delete(d.ref));
-    await batch.commit();
-  };
-
-  // ── Teachers ──────────────────────────────────────────────
   const bulkAddTeachers = async (data: any[]) => {
     const batch = writeBatch(db);
     data.forEach(teacher => {
-      batch.set(doc(collection(db, "teachers")), { 
+      const docRef = doc(collection(db, "teachers"));
+      batch.set(docRef, { 
         ...teacher, 
         allowedClasses: teacher.allowedClasses || [],
         createdAt: serverTimestamp() 
@@ -179,17 +176,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await batch.commit();
   };
 
-  const updateTeacher = async (id: string, data: any) => await updateDoc(doc(db, "teachers", id), data);
-  const deleteTeacher = async (id: string) => await deleteDoc(doc(db, "teachers", id));
+  const updateTeacher = async (id: string, data: any) => {
+    await updateDoc(doc(db, "teachers", id), data);
+  };
 
-  // ── Students ──────────────────────────────────────────────
-  const updateStudent = async (id: string, data: any) => await updateDoc(doc(db, "students", id), data);
-  const deleteStudent = async (id: string) => await deleteDoc(doc(db, "students", id));
+  const deleteTeacher = async (id: string) => {
+    await deleteDoc(doc(db, "teachers", id));
+  };
 
-  // ── Bulk delete (any collection) ──────────────────────────
+  const updateStudent = async (id: string, data: any) => {
+    await updateDoc(doc(db, "students", id), data);
+  };
+
+  const deleteStudent = async (id: string) => {
+    await deleteDoc(doc(db, "students", id));
+  };
+
   const bulkDelete = async (collectionName: string, ids: string[]) => {
     const batch = writeBatch(db);
     ids.forEach(id => batch.delete(doc(db, collectionName, id)));
+    await batch.commit();
+  };
+
+  const deleteClass = async (id: string) => await deleteDoc(doc(db, "classes", id));
+  const deleteQuestion = async (id: string) => await deleteDoc(doc(db, "questions", id));
+
+  const deleteAllQuestions = async () => {
+    const qSnap = await getDocs(collection(db, "questions"));
+    const batch = writeBatch(db);
+    qSnap.forEach(d => batch.delete(d.ref));
     await batch.commit();
   };
 
@@ -199,9 +214,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       bulkAddClasses, bulkAddSubjects, bulkAddChapters, addBulkQuestions,
       bulkAddTeachers, updateTeacher, deleteTeacher,
       updateStudent, deleteStudent,
-      bulkDelete,
-      deleteClass, deleteSubject, deleteChapter, updateChapter,
-      deleteQuestion, deleteAllQuestions,
+      bulkDelete, deleteClass, deleteQuestion, deleteAllQuestions,
       setLanguage: (l: Language) => setState(p => ({ ...p, language: l })),
       setImpersonatedUser, 
       t
@@ -211,6 +224,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   );
 };
 
+// কাস্টম হুক
 export const useApp = () => {
   const context = useContext(AppContext);
   if (!context) throw new Error("useApp must be used within AppProvider");
