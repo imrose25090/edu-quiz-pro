@@ -244,17 +244,6 @@ export const QuizCreateForm: React.FC<QuizCreateFormProps> = ({
           </div>
         )}
 
-        {/* ── DEBUG (সমস্যা ঠিক হলে remove করো) ── */}
-        {newQuiz.subjectId && (
-          <div className="p-4 bg-yellow-50 border-2 border-yellow-200 rounded-2xl text-[10px] font-mono space-y-1 break-all">
-            <p className="font-black text-yellow-700">🔍 Debug</p>
-            <p>questions prop total: <b>{questions.length}</b></p>
-            <p>after class+subject filter: <b>{baseFilteredQuestions.length}</b></p>
-            <p>formats: <b>{adminFormats.map(f => f.type).join(' | ')}</b></p>
-            <p>q.types found: <b>{[...new Set(baseFilteredQuestions.map((q:any) => q.type))].join(' | ')}</b></p>
-            <p>availableCounts: <b>{JSON.stringify(availableCounts)}</b></p>
-          </div>
-        )}
 
         {/* Type filter buttons */}
         {newQuiz.subjectId && adminFormats.length > 0 && (
