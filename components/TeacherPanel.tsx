@@ -13,31 +13,39 @@ import { QuizAnalytics } from './teacher/QuizAnalytics';
 import { QuestionPaperView } from './teacher/QuestionPaperView';
 import { StudentTranscriptModal } from './teacher/StudentTranscriptModal';
 
-const TeacherPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
+interface TeacherPanelProps {
+  onBack: () => void;
+  loggedInTeacher?: Teacher | null;
+}
+
+const TeacherPanel: React.FC<TeacherPanelProps> = ({ onBack, loggedInTeacher }) => {
   const { classes, subjects, chapters, questions, teachers, t } = useApp();
-  
+
+  const [activeTeacher, setActiveTeacher] = useState<Teacher | null>(loggedInTeacher || null);
+  const [view, setView] = useState<'LOGIN' | 'LIST' | 'CREATE' | 'REPORT' | 'PAPER'>(
+    loggedInTeacher ? 'LIST' : 'LOGIN'
+  );
+
   const [firebaseQuizzes, setFirebaseQuizzes] = useState<Quiz[]>([]);
-  const [activeTeacher, setActiveTeacher] = useState<Teacher | null>(null);
-  const [view, setView] = useState<'LOGIN' | 'LIST' | 'CREATE' | 'REPORT' | 'PAPER'>('LOGIN');
   const [selectedQuiz, setSelectedQuiz] = useState<Quiz | null>(null);
   const [viewingAttempt, setViewingAttempt] = useState<QuizAttempt | null>(null);
-  
+
   const [pinInput, setPinInput] = useState('');
   const [loginError, setLoginError] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showAnswers, setShowAnswers] = useState(false);
+  const [copiedQuizId, setCopiedQuizId] = useState<string | null>(null);
 
   const reportRef = useRef<HTMLDivElement>(null);
   const paperRef = useRef<HTMLDivElement>(null);
-  const attemptSheetRef = useRef<HTMLDivElement>(null);
 
   const [newQuiz, setNewQuiz] = useState({
-    title: '', 
-    classId: '', 
-    subjectId: '', 
+    title: '',
+    classId: '',
+    subjectId: '',
     chapterIds: [] as string[],
-    qCount: 10, 
-    time: 30, 
+    qCount: 10,
+    time: 30,
     mode: 'AUTO' as any,
     typeCounts: {} as Record<string, number>,
     selectedQuestionIds: [] as string[]
@@ -45,10 +53,17 @@ const TeacherPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
   const [manualSelectedIds, setManualSelectedIds] = useState<string[]>([]);
 
+  useEffect(() => {
+    if (loggedInTeacher) {
+      setActiveTeacher(loggedInTeacher);
+      setView('LIST');
+    }
+  }, [loggedInTeacher]);
+
   const getRankInfo = (att: QuizAttempt, q: Quiz) => {
     if (!q.attempts || q.attempts.length === 0) return { rank: 1, total: 1 };
     const sorted = [...q.attempts].sort((a, b) => (b.score || 0) - (a.score || 0));
-    const rank = sorted.findIndex(s => 
+    const rank = sorted.findIndex(s =>
       s.submittedAt === att.submittedAt && s.studentName === att.studentName
     ) + 1;
     return { rank: rank > 0 ? rank : 1, total: sorted.length };
@@ -60,9 +75,9 @@ const TeacherPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Quiz[];
       setFirebaseQuizzes(list.sort((a, b) => {
-          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-          return dateB - dateA;
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA;
       }));
       if (selectedQuiz) {
         const updated = list.find(qz => qz.id === selectedQuiz.id);
@@ -75,7 +90,7 @@ const TeacherPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const foundTeacher = teachers.find(t => t.id === activeTeacher?.id);
-    if (foundTeacher && foundTeacher.pin === pinInput) {
+    if (foundTeacher && String(foundTeacher.pin).trim() === String(pinInput).trim()) {
       setView('LIST');
       setLoginError(false);
     } else {
@@ -84,60 +99,65 @@ const TeacherPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     }
   };
 
-  // ✅ FINAL FIXED: Launch Quiz Logic
   const handleLaunch = async () => {
     if (!newQuiz.title || !newQuiz.classId || !newQuiz.subjectId) {
       return alert("Please fill all required fields!");
     }
-    
+
     setLoading(true);
 
     try {
       let finalSelectedQs: any[] = [];
-
-      // ১. অগ্রাধিকার ভিত্তিক সিলেকশন (ID-ভিত্তিক)
-      // Form থেকে আসা selectedQuestionIds অথবা ম্যানুয়ালি সিলেক্ট করা আইডিগুলো ব্যবহার করবো
-      const targetIds = newQuiz.selectedQuestionIds && newQuiz.selectedQuestionIds.length > 0 
-        ? newQuiz.selectedQuestionIds 
+      const targetIds = newQuiz.selectedQuestionIds.length > 0
+        ? newQuiz.selectedQuestionIds
         : manualSelectedIds;
 
       if (targetIds.length > 0) {
-        // শুধুমাত্র সেই আইডিগুলো নিবো যা ডাটাবেসে আছে
         finalSelectedQs = questions.filter(q => targetIds.includes(q.id));
-      } 
-      else {
-        // ২. যদি কোনো আইডি সিলেক্ট করা না থাকে, তবেই অটো পুল তৈরি হবে 
-        // কিন্তু এটিও অবশ্যই ক্লাস এবং সাবজেক্ট ফিল্টার মেনে চলবে
-        let pool = questions.filter(q => 
-          q.classId === newQuiz.classId && 
+      } else {
+        let pool = questions.filter(q =>
+          q.classId === newQuiz.classId &&
           q.subjectId === newQuiz.subjectId
         );
-
-        if (newQuiz.chapterIds && newQuiz.chapterIds.length > 0) {
+        if (newQuiz.chapterIds?.length > 0) {
           pool = pool.filter(q => newQuiz.chapterIds.includes(q.chapterId));
         }
-
-        // র্যান্ডমলি প্রয়োজনীয় সংখ্যক প্রশ্ন নেওয়া
         finalSelectedQs = pool.sort(() => 0.5 - Math.random()).slice(0, newQuiz.qCount);
       }
 
-      // ৩. ভ্যালিডেশন: কোনো প্রশ্ন পাওয়া না গেলে থামিয়ে দিবে
       if (finalSelectedQs.length === 0) {
-        alert("Error: No valid questions found! Please select types or questions correctly.");
+        alert("No questions found for the selected criteria!");
         setLoading(false);
         return;
       }
 
-      // ৪. স্যানিটাইজেশন (টাইপ অনুযায়ী অপশন ক্লিয়ার করা)
+      // ── Sanitize ──────────────────────────────────────────
       const sanitizedQuestions = finalSelectedQs.map(q => {
         const type = String(q.type || "").toUpperCase();
-        // টাইপ যদি ইনপুট ভিত্তিক হয় তবে অপশন থাকবে না
-        const isInputType = type.includes('SHORT') || type.includes('GAP') || type.includes('FILL');
+        const isInputType = type === 'FILL_IN_THE_GAP' || type === 'SHORT_ANSWER';
         return {
-          ...q,
-          options: isInputType ? [] : (q.options || [])
+          id: q.id,
+          text: q.text || "",
+          type: type,
+          options: isInputType ? [] : (q.options || []),
+          answer: q.answer || "",
+          marks: Number(q.marks) || 1,
+          classId: q.classId,
+          subjectId: q.subjectId,
+          chapterId: q.chapterId
         };
       });
+
+      // ── Type অনুযায়ী sort — একই type একসাথে ──────────────
+      // প্রথমবার যে type আসে সেটা আগে, পরেরটা পরে
+      const typeOrder: Record<string, number> = {};
+      let orderIdx = 0;
+      sanitizedQuestions.forEach(q => {
+        if (typeOrder[q.type] === undefined) typeOrder[q.type] = orderIdx++;
+      });
+      const sortedQuestions = [...sanitizedQuestions].sort((a, b) =>
+        (typeOrder[a.type] ?? 99) - (typeOrder[b.type] ?? 99)
+      );
 
       const quizData = {
         code: Math.random().toString(36).substring(2, 8).toUpperCase(),
@@ -146,42 +166,53 @@ const TeacherPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         teacherName: activeTeacher?.name,
         classId: newQuiz.classId,
         subjectId: newQuiz.subjectId,
-        questions: sanitizedQuestions,
-        attempts: [], 
+        questions: sortedQuestions,
+        attempts: [],
         createdAt: new Date().toISOString(),
         timestamp: serverTimestamp(),
-        config: { 
-          totalTime: newQuiz.time, 
-          totalMarks: sanitizedQuestions.length, 
-          passingMarks: Math.ceil(sanitizedQuestions.length * 0.4) 
+        config: {
+          totalTime: Number(newQuiz.time),
+          totalMarks: sortedQuestions.reduce((sum, q) => sum + q.marks, 0),
+          passingMarks: Math.ceil(sortedQuestions.length * 0.4)
         }
       };
 
       await addDoc(collection(db, "quizzes"), quizData);
-      
-      alert(`Quiz Created Successfully! Code: ${quizData.code}`);
+
+      alert(`Quiz Created! Code: ${quizData.code}`);
       setView('LIST');
-      
-      // ৫. ফর্ম রিসেট
-      setNewQuiz({ 
-        title: '', classId: '', subjectId: '', chapterIds: [], 
-        qCount: 10, time: 30, mode: 'AUTO', typeCounts: {}, selectedQuestionIds: [] 
+      setNewQuiz({
+        title: '', classId: '', subjectId: '', chapterIds: [],
+        qCount: 10, time: 30, mode: 'AUTO', typeCounts: {}, selectedQuestionIds: []
       });
       setManualSelectedIds([]);
     } catch (err) {
-      console.error("Launch Error:", err);
-      alert("Failed to create quiz! Check console for details.");
+      console.error(err);
+      alert("Failed to create quiz!");
     } finally {
       setLoading(false);
     }
   };
 
+  const copyCodeToClipboard = (code: string, quizId: string) => {
+    navigator.clipboard.writeText(code).then(() => {
+      setCopiedQuizId(quizId);
+      setTimeout(() => setCopiedQuizId(null), 2000);
+    }).catch(() => alert('Failed to copy!'));
+  };
+
   if (view === 'LOGIN') {
     return (
-      <TeacherLogin 
-        teachers={teachers} activeTeacher={activeTeacher} setActiveTeacher={setActiveTeacher} 
-        pinInput={pinInput} setPinInput={setPinInput} handleLogin={handleLoginSubmit} 
-        loginError={loginError} onBack={onBack} t={t} 
+      <TeacherLogin
+        teachers={teachers}
+        activeTeacher={activeTeacher}
+        setActiveTeacher={setActiveTeacher}
+        pinInput={pinInput}
+        setPinInput={setPinInput}
+        handleLogin={handleLoginSubmit}
+        loginError={loginError}
+        onBack={onBack}
+        t={t}
       />
     );
   }
@@ -189,38 +220,106 @@ const TeacherPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   return (
     <div className="min-h-screen bg-[#F8FAFC] pb-20 p-4 font-['Hind_Siliguri']">
       <div className="max-w-7xl mx-auto space-y-8">
-        
-        {/* Header Navigation */}
+
+        {/* ── Header ─────────────────────────────────────────── */}
         <div className="flex flex-col md:flex-row justify-between items-center bg-white p-6 md:p-8 rounded-[40px] shadow-sm border border-slate-100 gap-6">
           <div className="flex items-center gap-5">
-              <button onClick={() => { setView('LIST'); setSelectedQuiz(null); }} className="w-12 h-12 bg-slate-50 text-slate-400 rounded-2xl flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all shadow-sm font-bold">←</button>
-              <div>
-                <h2 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tighter uppercase italic">Faculty <span className="text-indigo-600">Portal</span></h2>
-                <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest">Active Teacher: {activeTeacher?.name}</p>
-              </div>
+            <button
+              onClick={() => { if (loggedInTeacher) onBack(); else setView('LIST'); }}
+              className="w-12 h-12 bg-slate-50 text-slate-400 rounded-2xl flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all shadow-sm font-bold"
+            >←</button>
+            <div>
+              <h2 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tighter uppercase italic">
+                Faculty <span className="text-indigo-600">Portal</span>
+              </h2>
+              <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest">
+                Active Teacher: {activeTeacher?.name}
+              </p>
+            </div>
           </div>
           <div className="flex gap-4">
-            <button onClick={() => setView('CREATE')} className="bg-indigo-600 text-white px-6 md:px-8 py-3 md:py-4 rounded-2xl font-black shadow-lg hover:bg-black transition-all uppercase text-[10px] tracking-widest">Create New Quiz</button>
+            <button
+              onClick={() => setView('CREATE')}
+              className="bg-indigo-600 text-white px-6 md:px-8 py-3 md:py-4 rounded-2xl font-black shadow-lg hover:bg-black transition-all uppercase text-[10px] tracking-widest"
+            >
+              Create New Quiz
+            </button>
+            <button
+              onClick={onBack}
+              className="bg-slate-100 text-slate-500 px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all"
+            >
+              Exit
+            </button>
           </div>
         </div>
 
+        {/* ── Quiz List ───────────────────────────────────────── */}
         {view === 'LIST' && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-4">
             {firebaseQuizzes.length === 0 ? (
               <div className="col-span-full py-24 text-center bg-white rounded-[40px] border-2 border-dashed border-slate-100">
-                 <p className="text-slate-400 font-black uppercase tracking-widest text-sm">No quizzes created yet</p>
+                <p className="text-slate-400 font-black uppercase tracking-widest text-sm">No quizzes created yet</p>
               </div>
             ) : (
               firebaseQuizzes.map(quiz => (
-                <div key={quiz.id} className="bg-white p-8 rounded-[40px] border border-slate-50 shadow-sm hover:shadow-xl transition-all relative group">
+                <div key={quiz.id}
+                  className="bg-white p-8 rounded-[40px] border border-slate-50 shadow-sm hover:shadow-xl transition-all relative group">
                   <div className="flex justify-between items-start mb-6">
-                    <span className="bg-emerald-50 text-emerald-600 px-4 py-1.5 rounded-full text-[10px] font-black uppercase">Code: {quiz.code}</span>
-                    <span className="text-slate-300 font-black text-[10px] uppercase">Attempts: {quiz.attempts?.length || 0}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="bg-emerald-50 text-emerald-600 px-4 py-1.5 rounded-full text-[10px] font-black uppercase">
+                        Code: {quiz.code}
+                      </span>
+                      <button
+                        onClick={() => copyCodeToClipboard(quiz.code!, quiz.id)}
+                        className="text-slate-400 hover:text-indigo-600 transition-colors relative"
+                        title="Copy quiz code"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                        </svg>
+                        {copiedQuizId === quiz.id && (
+                          <span className="absolute -top-2 -right-2 bg-indigo-600 text-white text-[8px] px-1 py-0.5 rounded-md">Copied!</span>
+                        )}
+                      </button>
+                    </div>
+                    <span className="text-slate-300 font-black text-[10px] uppercase">
+                      Attempts: {quiz.attempts?.length || 0}
+                    </span>
                   </div>
-                  <h3 className="font-black text-xl text-slate-800 mb-8 h-14 overflow-hidden">{quiz.title}</h3>
+
+                  <h3 className="font-black text-xl text-slate-800 mb-4 h-14 overflow-hidden">{quiz.title}</h3>
+
+                  {/* Question type breakdown */}
+                  {quiz.questions && quiz.questions.length > 0 && (() => {
+                    const typeCounts: Record<string, number> = {};
+                    quiz.questions.forEach((q: any) => {
+                      const t = q.type || 'OTHER';
+                      typeCounts[t] = (typeCounts[t] || 0) + 1;
+                    });
+                    return (
+                      <div className="flex flex-wrap gap-1.5 mb-5">
+                        {Object.entries(typeCounts).map(([type, count]) => (
+                          <span key={type} className="text-[9px] font-black bg-indigo-50 text-indigo-500 px-2 py-0.5 rounded-full uppercase">
+                            {type}: {count}
+                          </span>
+                        ))}
+                      </div>
+                    );
+                  })()}
+
                   <div className="flex gap-2">
-                    <button onClick={() => { setSelectedQuiz(quiz); setView('REPORT'); }} className="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-black transition-all">Results</button>
-                    <button onClick={() => { setSelectedQuiz(quiz); setView('PAPER'); }} className="px-5 bg-slate-50 text-slate-400 rounded-2xl font-black text-[10px] hover:bg-indigo-50 hover:text-indigo-600 transition-all border border-slate-100">View</button>
+                    <button
+                      onClick={() => { setSelectedQuiz(quiz); setView('REPORT'); }}
+                      className="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-black transition-all"
+                    >
+                      Results
+                    </button>
+                    <button
+                      onClick={() => { setSelectedQuiz(quiz); setView('PAPER'); }}
+                      className="px-5 bg-slate-50 text-slate-400 rounded-2xl font-black text-[10px] hover:bg-indigo-50 hover:text-indigo-600 transition-all border border-slate-100"
+                    >
+                      View
+                    </button>
                   </div>
                 </div>
               ))
@@ -229,30 +328,45 @@ const TeacherPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         )}
 
         {view === 'CREATE' && (
-          <QuizCreateForm 
-            newQuiz={newQuiz} setNewQuiz={setNewQuiz} classes={classes} subjects={subjects} chapters={chapters} 
-            questions={questions} manualSelectedIds={manualSelectedIds} setManualSelectedIds={setManualSelectedIds} 
-            aiLoading={loading} onSubmit={handleLaunch} onCancel={() => setView('LIST')} 
+          <QuizCreateForm
+            newQuiz={newQuiz}
+            setNewQuiz={setNewQuiz}
+            classes={classes}
+            subjects={subjects}
+            chapters={chapters}
+            questions={questions}
+            manualSelectedIds={manualSelectedIds}
+            setManualSelectedIds={setManualSelectedIds}
+            aiLoading={loading}
+            onSubmit={handleLaunch}
+            onCancel={() => setView('LIST')}
           />
         )}
 
         {view === 'REPORT' && selectedQuiz && (
-          <QuizAnalytics 
-            selectedQuiz={selectedQuiz} reportRef={reportRef} 
-            onBack={() => setView('LIST')} onDownload={() => {}} 
+          <QuizAnalytics
+            selectedQuiz={selectedQuiz}
+            reportRef={reportRef}
+            onBack={() => setView('LIST')}
+            onDownload={() => {}}
             setViewingAttempt={setViewingAttempt}
           />
         )}
 
         {view === 'PAPER' && selectedQuiz && (
-          <QuestionPaperView 
-            selectedQuiz={selectedQuiz} classes={classes} subjects={subjects} branding={{name: 'EduQuiz Pro', motto: '', address: ''}} 
-            showAnswers={showAnswers} setShowAnswers={setShowAnswers} onDownload={() => {}} paperRef={paperRef} onBack={() => setView('LIST')} 
+          <QuestionPaperView
+            selectedQuiz={selectedQuiz}
+            classes={classes}
+            subjects={subjects}
+            branding={{ name: 'EduQuiz Pro', motto: '', address: '' }}
+            showAnswers={showAnswers}
+            setShowAnswers={setShowAnswers}
+            onBack={() => setView('LIST')}
           />
         )}
 
         {viewingAttempt && selectedQuiz && (
-          <StudentTranscriptModal 
+          <StudentTranscriptModal
             attempt={viewingAttempt}
             quiz={selectedQuiz}
             onClose={() => setViewingAttempt(null)}
