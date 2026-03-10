@@ -4,7 +4,7 @@ import { Quiz, Teacher, QuizAttempt } from '../types';
 
 // Firebase
 import { db } from '../firebase';
-import { collection, collectionGroup, addDoc, onSnapshot, query, where, orderBy, getDocs, serverTimestamp } from "firebase/firestore";
+import { collection, collectionGroup, addDoc, onSnapshot, query, where, orderBy, getDocs, serverTimestamp, updateDoc, doc } from "firebase/firestore";
 
 // Sub-components
 import { TeacherLogin } from './teacher/TeacherLogin';
@@ -100,14 +100,64 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({ onBack, loggedInTeacher, on
     return () => unsubscribe();
   }, [activeTeacher, selectedQuiz?.id]);
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  // ── Session validation — অন্য কেউ login করলে kick out ──
+  useEffect(() => {
+    if (!activeTeacher || view === 'LOGIN') return;
+    const storedToken = sessionStorage.getItem('teacher_session_token');
+    if (!storedToken) return;
+
+    const unsub = onSnapshot(doc(db, 'teachers', activeTeacher.id), (snap) => {
+      const data = snap.data();
+      if (!data) return;
+      // Firebase এর token আর browser এর token মিলছে না → অন্য কেউ login করেছে
+      if (data.sessionToken && data.sessionToken !== storedToken) {
+        alert('⚠️ আপনার account অন্য একটি device থেকে login করা হয়েছে। Security এর জন্য logout হচ্ছে।');
+        sessionStorage.removeItem('teacher_session_token');
+        sessionStorage.removeItem('teacher_session_id');
+        setView('LOGIN');
+        setActiveTeacher(null);
+      }
+    });
+    return () => unsub();
+  }, [activeTeacher, view]);
+
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const foundTeacher = teachers.find(t => t.id === activeTeacher?.id);
     if (foundTeacher && String(foundTeacher.pin).trim() === String(pinInput).trim()) {
+
+      // ── Session tracking ──────────────────────────────────
+      const newToken  = Math.random().toString(36).substring(2) + Date.now().toString(36);
+      const deviceInfo = navigator.userAgent.substring(0, 80);
+      const loginAt    = new Date().toISOString();
+
+      // আগে active session ছিল কিনা — থাকলে Admin কে alert
+      if (foundTeacher.sessionToken && foundTeacher.lastLoginAt) {
+        await addDoc(collection(db, 'securityAlerts'), {
+          type:        'DUPLICATE_LOGIN',
+          teacherId:   foundTeacher.id,
+          teacherName: foundTeacher.name,
+          newDevice:   deviceInfo,
+          prevLoginAt: foundTeacher.lastLoginAt,
+          detectedAt:  loginAt,
+          resolved:    false,
+        });
+      }
+
+      // নতুন session Firebase এ save
+      await updateDoc(doc(db, 'teachers', foundTeacher.id), {
+        sessionToken: newToken,
+        lastLoginAt:  loginAt,
+        lastDevice:   deviceInfo,
+      });
+
+      // Browser এ token store
+      sessionStorage.setItem('teacher_session_token', newToken);
+      sessionStorage.setItem('teacher_session_id',    foundTeacher.id);
+
       setView('LIST');
       setLoginError(false);
-      // App.tsx কে জানাও যাতে loggedInTeacher state update হয়
-      if (onLoginSuccess && foundTeacher) onLoginSuccess(foundTeacher);
+      if (onLoginSuccess) onLoginSuccess(foundTeacher);
     } else {
       setLoginError(true);
       setPinInput('');
