@@ -6,6 +6,7 @@ import { collection, getDocs, writeBatch, doc } from "firebase/firestore";
 
 interface SystemSettingsProps {
   onReset?: () => void;
+  quizzes?: any[];
 }
 
 export const SystemSettings: React.FC<SystemSettingsProps> = ({ onReset }) => {
