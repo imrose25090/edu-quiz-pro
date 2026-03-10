@@ -1,4 +1,3 @@
-```tsx
 import React, { useState } from "react";
 
 const QuizBattle: React.FC = () => {
@@ -33,4 +32,3 @@ const QuizBattle: React.FC = () => {
 };
 
 export default QuizBattle;
-```
