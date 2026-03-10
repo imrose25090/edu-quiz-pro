@@ -1,4 +1,3 @@
-```tsx
 import React, { useState } from "react";
 
 const cardsData = [
@@ -36,5 +35,3 @@ const MemoryGame: React.FC = () => {
 };
 
 export default MemoryGame;
-```
-s
