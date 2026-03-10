@@ -134,11 +134,20 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({ onBack, loggedInTeacher }) 
       // ── Sanitize ──────────────────────────────────────────
       const sanitizedQuestions = finalSelectedQs.map(q => {
         const type = String(q.type || "").toUpperCase();
-        const isInputType = type === 'FILL_IN_THE_GAP' || type === 'SHORT_ANSWER';
+        // Firebase এ "Standard MCQ" / "বর্ণমূলক প্রশ্ন" থাকলে MCQ তে normalize
+        const normalizeQuizType = (t: string): string => {
+          if (t.includes('MCQ') || t.includes('MULTIPLE') || t.includes('STANDARD')) return 'MCQ';
+          if (t.includes('TRUE') || t.includes('FALSE') || t.includes('TF')) return 'TRUE_FALSE';
+          if (t.includes('SHORT') || t.includes('বর্ণ') || t.includes('WRITTEN')) return 'SHORT_ANSWER';
+          if (t.includes('FILL') || t.includes('GAP')) return 'FILL_GAP';
+          return t;
+        };
+        const finalType = normalizeQuizType(type);
+        const isInputType = finalType === 'FILL_IN_THE_GAP' || finalType === 'FILL_GAP' || finalType === 'SHORT_ANSWER';
         return {
           id: q.id,
           text: q.text || "",
-          type: type,
+          type: finalType,
           options: isInputType ? [] : (q.options || []),
           answer: q.answer || "",
           marks: Number(q.marks) || 1,
