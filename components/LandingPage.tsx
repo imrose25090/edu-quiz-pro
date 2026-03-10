@@ -7,12 +7,16 @@ interface LandingPageProps {
   onSelectRole: (role: UserRole) => void;
   onSecretClick: () => void;
   totalQuestions?: number;
+  totalClasses?: number;
+  totalSubjects?: number;
 }
 
 const LandingPage: React.FC<LandingPageProps> = ({ 
   onSelectRole, 
   onSecretClick,
-  totalQuestions = 0
+  totalQuestions = 0,
+  totalClasses = 0,
+  totalSubjects = 0
 }) => {
   const { t, language } = useApp();
   const [showExplorer, setShowExplorer] = useState(false);
