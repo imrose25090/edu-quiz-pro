@@ -23,51 +23,33 @@ export const QuizCreateForm: React.FC<QuizCreateFormProps> = ({
   const [adminFormats, setAdminFormats] = useState<any[]>([]);
   const [activeTypeFilter, setActiveTypeFilter] = useState<string>('ALL');
 
-  // ✅ উন্নত নরমালাইজেশন ফাংশন যা "Standard MCQ" কে "MCQ" বানাবে
-  const normalizeType = (type: string) => {
-    if (!type) return '';
-    let t = type.toString().trim().toUpperCase();
-    if (t.includes('MCQ')) return 'MCQ';
-    if (t.includes('TRUE') || t.includes('FALSE')) return 'TRUE_FALSE';
-    if (t.includes('SHORT')) return 'SHORT_ANSWER';
-    if (t.includes('GAP') || t.includes('FILL')) return 'FILL_IN_THE_GAP';
-    return t.replace(/[\s-]+/g, '_');
-  };
-
   useEffect(() => {
     const loadFormats = () => {
-      // ১. ডাটাবেসে থাকা ইউনিক টাইপগুলো বের করি
-      const uniqueRawTypes = Array.from(new Set(questions.map(q => q.type)));
-      
-      // ২. LocalStorage থেকে নামগুলো নেওয়ার চেষ্টা করি
       const saved = localStorage.getItem('quiz_formats');
-      const savedFormats = saved ? JSON.parse(saved) : [];
-
-      // ৩. যদি কোনো ফরম্যাট না থাকে তবে ডিফল্ট, নাহলে ডাইনামিকালি তৈরি
-      const finalFormats = uniqueRawTypes.length > 0 ? uniqueRawTypes.map((rawType, index) => {
-        const norm = normalizeType(rawType);
-        const savedMatch = savedFormats.find((f: any) => normalizeType(f.type) === norm);
-        return {
-          id: index.toString(),
-          type: norm,
-          name: savedMatch ? savedMatch.name : norm.replace(/_/g, ' '),
-          requiresInput: norm.includes('ANSWER') || norm.includes('GAP')
-        };
-      }) : [
-        { id: '1', type: 'MCQ', name: 'Standard MCQ', requiresInput: false },
-        { id: '2', type: 'TRUE_FALSE', name: 'True/False', requiresInput: false },
-        { id: '3', type: 'SHORT_ANSWER', name: 'Short Answer', requiresInput: true },
-        { id: '4', type: 'FILL_IN_THE_GAP', name: 'Fill In The Gap', requiresInput: true }
-      ];
-
-      setAdminFormats(finalFormats);
+      if (saved) {
+        setAdminFormats(JSON.parse(saved));
+      } else {
+        const defaultFormats = [
+          { id: '1', type: 'MCQ', name: 'Standard MCQ', requiresInput: false },
+          { id: '2', type: 'TRUE_FALSE', name: 'True/False', requiresInput: false },
+          { id: '3', type: 'SHORT_ANSWER', name: 'Short Answer', requiresInput: true },
+          { id: '4', type: 'FILL_IN_THE_GAP', name: 'Fill In The Gap', requiresInput: true }
+        ];
+        setAdminFormats(defaultFormats);
+      }
     };
-
     loadFormats();
+
     window.addEventListener('storage_updated', loadFormats);
     return () => window.removeEventListener('storage_updated', loadFormats);
-  }, [questions]);
+  }, []);
 
+  const normalizeType = (type: string) => {
+    if (!type) return '';
+    return type.toString().trim().toUpperCase().replace(/[\s-]+/g, '_');
+  };
+
+  // ✅ বেস ফিল্টার্ড প্রশ্ন (ক্লাস, সাবজেক্ট এবং চ্যাপ্টার অনুযায়ী)
   const baseFilteredQuestions = useMemo(() => {
     return questions.filter(q => {
       const matchClass = q.classId === newQuiz.classId;
@@ -79,6 +61,7 @@ export const QuizCreateForm: React.FC<QuizCreateFormProps> = ({
     });
   }, [questions, newQuiz.classId, newQuiz.subjectId, newQuiz.chapterIds]);
 
+  // ✅ টাইপ অনুযায়ী এভেইলেবল প্রশ্ন গণনা
   const availableCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     adminFormats.forEach(f => {
@@ -89,14 +72,17 @@ export const QuizCreateForm: React.FC<QuizCreateFormProps> = ({
     return counts;
   }, [baseFilteredQuestions, adminFormats]);
 
+  // ✅ ম্যানুয়াল সিলেকশনের জন্য ফিল্টার্ড লিস্ট
   const filteredQuestions = useMemo(() => {
     const activeFilterNormalized = normalizeType(activeTypeFilter);
     return baseFilteredQuestions.filter(q => {
       const qTypeNormalized = normalizeType(q.type);
-      if (activeFilterNormalized === 'ALL') return true;
+      const isAdminType = adminFormats.some(f => normalizeType(f.type) === qTypeNormalized);
+      
+      if (activeFilterNormalized === 'ALL') return isAdminType;
       return qTypeNormalized === activeFilterNormalized;
     });
-  }, [baseFilteredQuestions, activeTypeFilter]);
+  }, [baseFilteredQuestions, activeTypeFilter, adminFormats]);
 
   const toggleChapter = (chapterId: string) => {
     const currentIds = newQuiz.chapterIds || [];
@@ -104,10 +90,11 @@ export const QuizCreateForm: React.FC<QuizCreateFormProps> = ({
       ? currentIds.filter((id: string) => id !== chapterId)
       : [...currentIds, chapterId];
     
-    setNewQuiz({ ...newQuiz, chapterIds: newIds, typeCounts: {}, qCount: 0, selectedQuestionIds: [] });
+    setNewQuiz({ ...newQuiz, chapterIds: newIds, typeCounts: {}, qCount: 0 });
     setManualSelectedIds([]);
   };
 
+  // ✅ AUTO মোডের জন্য হ্যান্ডলার (টাইপ ভিত্তিক প্রশ্ন সিলেকশন নিশ্চিত করে)
   const handleTypeCountChange = (type: string, count: number) => {
     const val = isNaN(count) ? 0 : count;
     const available = availableCounts[type] || 0;
@@ -118,6 +105,7 @@ export const QuizCreateForm: React.FC<QuizCreateFormProps> = ({
       [type]: finalCount
     };
 
+    // শুধুমাত্র যে টাইপগুলোর সংখ্যা ০ এর বেশি, সেগুলোর থেকে প্রশ্ন কালেক্ট করা
     let selectedIds: string[] = [];
     Object.keys(updatedTypeCounts).forEach(t => {
       const tNormalized = normalizeType(t);
@@ -125,19 +113,18 @@ export const QuizCreateForm: React.FC<QuizCreateFormProps> = ({
       if (countToTake > 0) {
         const matchedQs = baseFilteredQuestions
           .filter(q => normalizeType(q.type) === tNormalized)
-          .sort(() => 0.5 - Math.random()) // র্যান্ডমলি সিলেক্ট করবে
           .slice(0, countToTake)
           .map(q => q.id);
         selectedIds = [...selectedIds, ...matchedQs];
       }
     });
 
-    setManualSelectedIds(selectedIds);
+    setManualSelectedIds(selectedIds); // Auto mode হলেও internal ID track রাখা জরুরি
     setNewQuiz({ 
       ...newQuiz, 
       typeCounts: updatedTypeCounts, 
       qCount: selectedIds.length,
-      selectedQuestionIds: selectedIds 
+      selectedQuestionIds: selectedIds // সাবমিটের জন্য আইডিগুলো সেভ করে রাখা
     });
   };
 
@@ -216,7 +203,7 @@ export const QuizCreateForm: React.FC<QuizCreateFormProps> = ({
                 ALL ({Object.values(availableCounts).reduce((a, b) => a + b, 0)})
               </button>
               {adminFormats.map(f => (
-                <button key={f.id} type="button" onClick={() => setActiveTypeFilter(f.type)} className={`px-4 py-2 rounded-xl text-[10px] font-bold border-2 transition-all ${normalizeType(activeTypeFilter) === normalizeType(f.type) ? 'bg-indigo-600 border-indigo-600 text-white shadow-md' : 'bg-white border-slate-200 text-slate-400'}`}>
+                <button key={f.id} type="button" onClick={() => setActiveTypeFilter(f.type)} className={`px-4 py-2 rounded-xl text-[10px] font-bold border-2 transition-all ${activeTypeFilter === f.type ? 'bg-indigo-600 border-indigo-600 text-white shadow-md' : 'bg-white border-slate-200 text-slate-400'}`}>
                   {f.name.toUpperCase()} ({availableCounts[f.type] || 0})
                 </button>
               ))}
