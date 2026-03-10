@@ -1,4 +1,3 @@
-```tsx
 import React, { useState } from "react";
 
 const PuzzleGame: React.FC = () => {
@@ -35,4 +34,3 @@ const PuzzleGame: React.FC = () => {
 };
 
 export default PuzzleGame;
-```
