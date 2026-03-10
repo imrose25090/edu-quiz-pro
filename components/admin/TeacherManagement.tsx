@@ -7,11 +7,12 @@ interface TeacherManagementProps {
   bulkAddTeachers: (data: any[]) => void;
   updateTeacher: (id: string, data: any) => void;
   deleteTeacher: (id: string) => void;
+  bulkDelete?: (collectionName: string, ids: string[]) => Promise<void>;
   onTeacherSelect?: (teacherId: string) => void;
 }
 
 export const TeacherManagement: React.FC<TeacherManagementProps> = ({
-  teachers, bulkAddTeachers, updateTeacher, deleteTeacher, onTeacherSelect
+  teachers, bulkAddTeachers, updateTeacher, deleteTeacher, bulkDelete, onTeacherSelect
 }) => {
   const { classes } = useApp(); // স্টোর থেকে সব ক্লাস নেওয়া হলো
   const [localInputText, setLocalInputText] = useState('');
