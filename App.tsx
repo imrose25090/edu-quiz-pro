@@ -155,11 +155,7 @@ const MainContent: React.FC = () => {
           <TeacherPanel
             onBack={handleLogout}
             loggedInTeacher={loggedInTeacher}
-            onTeacherLogin={(email: string, pass: string) => {
-              const t = teachers.find(t => t.email === email && t.password === pass);
-              if (t && !t.isFrozen) { setLoggedInTeacher(t); return true; }
-              return false;
-            }}
+            onLoginSuccess={(teacher) => setLoggedInTeacher(teacher)}
           />
         )}
 
