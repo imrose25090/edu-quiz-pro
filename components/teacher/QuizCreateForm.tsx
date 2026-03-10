@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Class, Subject, Chapter, Question } from '../../types';
+import { db } from '../../firebase';
+import { collection, onSnapshot } from 'firebase/firestore';
 
 interface QuizCreateFormProps {
   newQuiz: any;
@@ -24,27 +26,41 @@ export const QuizCreateForm: React.FC<QuizCreateFormProps> = ({
   const [activeTypeFilter, setActiveTypeFilter] = useState<string>('ALL');
 
   useEffect(() => {
-    const loadFormats = () => {
-      const saved = localStorage.getItem('quiz_formats');
-      if (saved) {
-        setAdminFormats(JSON.parse(saved));
+    // Firebase থেকে real-time formats load — সব device এ কাজ করবে
+    const unsub = onSnapshot(collection(db, 'formats'), (snap) => {
+      if (!snap.empty) {
+        const loaded = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        setAdminFormats(loaded);
+        // localStorage ও sync রাখো
+        localStorage.setItem('quiz_formats', JSON.stringify(loaded));
       } else {
-        setAdminFormats([
-          { id: '1', type: 'MCQ',             name: 'Standard MCQ',   requiresInput: false },
-          { id: '2', type: 'TRUE_FALSE',       name: 'True/False',     requiresInput: false },
-          { id: '3', type: 'SHORT_ANSWER',     name: 'Short Answer',   requiresInput: true  },
-          { id: '4', type: 'FILL_GAP',          name: 'Fill in the Gap',requiresInput: true  },
-        ]);
+        // Firebase খালি হলে localStorage fallback
+        const saved = localStorage.getItem('quiz_formats');
+        if (saved) setAdminFormats(JSON.parse(saved));
       }
-    };
-    loadFormats();
-    window.addEventListener('storage_updated', loadFormats);
-    return () => window.removeEventListener('storage_updated', loadFormats);
+    });
+    return () => unsub();
   }, []);
 
   // ── Helpers ───────────────────────────────────────────────
-  const norm     = (v: any) => String(v || '').trim().toUpperCase().replace(/[\s-]+/g, '_');
-  const sameId   = (a: any, b: any) => String(a || '').trim() === String(b || '').trim();
+  const norm = (v: any) => String(v || '').trim().toUpperCase().replace(/[\s-]+/g, '_');
+  const sameId = (a: any, b: any) => String(a || '').trim() === String(b || '').trim();
+
+  // question এর type কে format key তে convert করা
+  // Firebase এ "Standard MCQ", "MCQ", "বর্ণমূলক প্রশ্ব" — সব handle করবে
+  const resolveType = (qType: string, formats: any[]): string => {
+    const qNorm = norm(qType);
+    // exact type match
+    const byType = formats.find(f => norm(f.type) === qNorm);
+    if (byType) return byType.type;
+    // name match — e.g. "Standard MCQ" matches format name "Standard MCQ"
+    const byName = formats.find(f => norm(f.name) === qNorm);
+    if (byName) return byName.type;
+    // partial — qType contains format type or vice versa
+    const byPartial = formats.find(f => qNorm.includes(norm(f.type)) || norm(f.type).includes(qNorm));
+    if (byPartial) return byPartial.type;
+    return qNorm;
+  };
 
   // ── Base filtered questions (class + subject + chapters) ──
   const baseFilteredQuestions = useMemo(() => {
@@ -77,7 +93,9 @@ export const QuizCreateForm: React.FC<QuizCreateFormProps> = ({
   const availableCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     adminFormats.forEach(f => {
-      counts[f.type] = baseFilteredQuestions.filter(q => norm(q.type) === norm(f.type)).length;
+      counts[f.type] = baseFilteredQuestions.filter(
+        q => resolveType(q.type, adminFormats) === f.type
+      ).length;
     });
     return counts;
   }, [baseFilteredQuestions, adminFormats]);
@@ -85,10 +103,10 @@ export const QuizCreateForm: React.FC<QuizCreateFormProps> = ({
   // ── Filtered list for manual selection ───────────────────
   const filteredQuestions = useMemo(() => {
     return baseFilteredQuestions.filter(q => {
-      const qNorm = norm(q.type);
-      const isKnownType = adminFormats.some(f => norm(f.type) === qNorm);
-      if (activeTypeFilter === 'ALL') return isKnownType;
-      return qNorm === norm(activeTypeFilter);
+      const resolved = resolveType(q.type, adminFormats);
+      const isKnown = adminFormats.some(f => f.type === resolved);
+      if (activeTypeFilter === 'ALL') return isKnown;
+      return resolved === activeTypeFilter;
     });
   }, [baseFilteredQuestions, activeTypeFilter, adminFormats]);
 
@@ -111,7 +129,7 @@ export const QuizCreateForm: React.FC<QuizCreateFormProps> = ({
     Object.entries(updatedTypeCounts).forEach(([t, n]) => {
       if ((n as number) > 0) {
         const matched = baseFilteredQuestions
-          .filter(q => norm(q.type) === norm(t))
+          .filter(q => resolveType(q.type, adminFormats) === t)
           .slice(0, n as number)
           .map(q => q.id);
         selectedIds = [...selectedIds, ...matched];
