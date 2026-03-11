@@ -100,6 +100,7 @@ export const QuestionPaperView: React.FC<QuestionPaperViewProps> = ({
 
   /* ─── Sidebar tab ──────────────────────────────────────── */
   const [activeTab, setActiveTab] = useState<'branding'|'page'|'font'|'layout'|'header'|'theme'>('branding');
+  const [sidebarOpen, setSidebarOpen] = useState(false); // ✅ mobile sidebar toggle
 
   /* ─── PDF state ────────────────────────────────────────── */
   const [pdfLoading, setPdfLoading] = useState(false);
@@ -235,10 +236,10 @@ export const QuestionPaperView: React.FC<QuestionPaperViewProps> = ({
 
   /* ═══════════════════════════════════════════════════════ */
   return (
-    <div className="flex h-screen bg-slate-200 overflow-hidden font-['Hind_Siliguri']">
+    <div className="flex h-screen bg-slate-200 overflow-hidden font-['Hind_Siliguri'] relative">
 
       {/* ── Icon Rail ─────────────────────────────────────── */}
-      <div className="w-14 bg-white border-r border-slate-200 flex flex-col items-center py-3 gap-1 shadow-sm no-print shrink-0">
+      <div className="hidden md:flex w-14 bg-white border-r border-slate-200 flex-col items-center py-3 gap-1 shadow-sm no-print shrink-0">
         <button
           onClick={onBack}
           className="mb-3 p-2 rounded-xl hover:bg-slate-100 text-slate-400 transition-all"
@@ -257,7 +258,33 @@ export const QuestionPaperView: React.FC<QuestionPaperViewProps> = ({
       </div>
 
       {/* ── Sidebar Panel ─────────────────────────────────── */}
-      <div className="w-60 bg-white border-r border-slate-200 overflow-y-auto py-3 px-3 no-print shrink-0">
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 bg-black/40 z-40 md:hidden" onClick={() => setSidebarOpen(false)} />
+      )}
+      <div className={`
+        fixed md:relative top-0 left-0 h-full z-50 md:z-auto
+        w-72 md:w-60 bg-white border-r border-slate-200 overflow-y-auto py-3 px-3 no-print shrink-0
+        transition-transform duration-300
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+      `}>
+      {/* Mobile close button */}
+      <div className="flex justify-between items-center mb-3 md:hidden">
+        <span className="text-xs font-black text-slate-600 uppercase tracking-widest">Settings</span>
+        <button onClick={() => setSidebarOpen(false)} className="w-8 h-8 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400">✕</button>
+      </div>
+      {/* Mobile tab icons */}
+      <div className="flex gap-1 mb-3 md:hidden">
+        {([
+          {id:'branding',icon:'🏫'},{id:'page',icon:'📄'},{id:'font',icon:'𝐓'},
+          {id:'layout',icon:'⬛'},{id:'header',icon:'🔝'},{id:'theme',icon:'🎨'}
+        ] as const).map(t => (
+          <button key={t.id} onClick={() => setActiveTab(t.id as any)}
+            className={`flex-1 py-1.5 rounded-lg text-sm transition-all ${activeTab===t.id?'bg-indigo-600':'bg-slate-100'}`}>
+            {t.icon}
+          </button>
+        ))}
+      </div>
 
         {/* BRANDING */}
         {activeTab === 'branding' && <>
@@ -453,52 +480,61 @@ export const QuestionPaperView: React.FC<QuestionPaperViewProps> = ({
       <div className="flex-1 flex flex-col overflow-hidden">
 
         {/* Top Toolbar */}
-        <div className="bg-white border-b border-slate-200 px-4 py-2 flex items-center gap-3 no-print shadow-sm">
+        <div className="bg-white border-b border-slate-200 px-3 py-2 flex items-center gap-2 no-print shadow-sm flex-wrap">
+
+          {/* ✅ Mobile: Settings toggle button */}
+          <button onClick={() => setSidebarOpen(true)}
+            className="md:hidden w-9 h-9 bg-slate-100 rounded-xl flex items-center justify-center text-slate-600 text-lg shrink-0">
+            ⚙️
+          </button>
+
+          {/* Mobile back button */}
+          <button onClick={onBack}
+            className="md:hidden w-9 h-9 bg-slate-100 rounded-xl flex items-center justify-center text-slate-600 shrink-0">
+            ←
+          </button>
+
           {/* Q / Answer toggle */}
           <div className="flex bg-slate-100 p-0.5 rounded-xl">
             <button onClick={() => setShowAnswers(false)}
-              className={`px-4 py-1.5 rounded-[10px] text-[10px] font-black uppercase transition-all ${!showAnswers ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-400'}`}>
-              Questions
+              className={`px-3 py-1.5 rounded-[10px] text-[10px] font-black uppercase transition-all ${!showAnswers ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-400'}`}>
+              Qs
             </button>
             <button onClick={() => setShowAnswers(true)}
-              className={`px-4 py-1.5 rounded-[10px] text-[10px] font-black uppercase transition-all ${showAnswers ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-400'}`}>
-              Answer Key
+              className={`px-3 py-1.5 rounded-[10px] text-[10px] font-black uppercase transition-all ${showAnswers ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-400'}`}>
+              Key
             </button>
           </div>
 
-          <div className="h-6 w-px bg-slate-200" />
-
           {/* Zoom buttons */}
-          <div className="flex items-center gap-2">
-            <button onClick={() => setZoom(z => Math.max(40, z - 10))}
-              className="w-7 h-7 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-black flex items-center justify-center">−</button>
-            <span className="text-[11px] font-black text-slate-600 w-12 text-center">{zoom}%</span>
+          <div className="flex items-center gap-1.5">
+            <button onClick={() => setZoom(z => Math.max(30, z - 10))}
+              className="w-8 h-8 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-black flex items-center justify-center active:scale-90">−</button>
+            <span className="text-[11px] font-black text-slate-600 w-10 text-center">{zoom}%</span>
             <button onClick={() => setZoom(z => Math.min(150, z + 10))}
-              className="w-7 h-7 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-black flex items-center justify-center">+</button>
+              className="w-8 h-8 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-black flex items-center justify-center active:scale-90">+</button>
           </div>
 
-          <div className="h-6 w-px bg-slate-200" />
-
-          <span className="text-[11px] font-black text-slate-400 uppercase tracking-wide">
-            {selectedQuiz.questions?.length || 0} Qs · {selectedQuiz.config?.totalMarks || 0} Marks
+          <span className="hidden sm:block text-[10px] font-black text-slate-400 uppercase">
+            {selectedQuiz.questions?.length || 0} Qs · {selectedQuiz.config?.totalMarks || 0}M
           </span>
 
           <div className="flex-1" />
 
           <button onClick={handlePrint}
-            className="flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-[10px] font-black uppercase transition-all">
-            🖨️ Print
+            className="hidden sm:flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-[10px] font-black uppercase transition-all active:scale-95">
+            🖨️ <span className="hidden md:inline">Print</span>
           </button>
           <button onClick={handleDownload} disabled={pdfLoading}
-            className={`flex items-center gap-1.5 px-5 py-2 rounded-xl text-[10px] font-black uppercase shadow-md transition-all ${
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-md transition-all active:scale-95 ${
               pdfLoading ? 'bg-indigo-300 text-white cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 text-white'
             }`}>
-            {pdfLoading ? '⏳ Generating…' : '⬇️ Download PDF'}
+            {pdfLoading ? '⏳' : '⬇️'} <span className="hidden sm:inline">{pdfLoading ? 'Generating…' : 'PDF'}</span>
           </button>
         </div>
 
         {/* Paper Preview */}
-        <div className="flex-1 overflow-auto flex justify-center items-start py-8 px-4 bg-slate-200">
+        <div className="flex-1 overflow-auto flex justify-center items-start py-4 md:py-8 px-2 md:px-4 bg-slate-200">
           <div
             style={{
               transform: `scale(${zoom / 100})`,
@@ -760,7 +796,22 @@ export const QuestionPaperView: React.FC<QuestionPaperViewProps> = ({
           .no-print { display: none !important; }
           body { margin: 0 !important; background: white !important; }
         }
+        @media (max-width: 768px) {
+          .paper-preview { padding: 8px !important; }
+        }
       `}</style>
+
+      {/* ✅ Mobile floating action buttons */}
+      <div className="fixed bottom-5 right-4 flex flex-col gap-2 md:hidden no-print z-30">
+        <button onClick={handlePrint}
+          className="w-12 h-12 bg-slate-700 text-white rounded-full shadow-xl flex items-center justify-center text-xl active:scale-90">
+          🖨️
+        </button>
+        <button onClick={handleDownload} disabled={pdfLoading}
+          className="w-12 h-12 bg-indigo-600 text-white rounded-full shadow-xl flex items-center justify-center text-xl active:scale-90 disabled:opacity-50">
+          {pdfLoading ? '⏳' : '⬇️'}
+        </button>
+      </div>
     </div>
   );
 };
