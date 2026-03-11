@@ -5,6 +5,7 @@ import AdminLogin from "./components/admin/AdminLogin";
 import AdminPanel from "./components/admin/AdminPanel";
 import TeacherPanel from "./components/TeacherPanel"; 
 import StudentPanel from "./components/StudentPanel"; 
+import { ChatPanel } from "./components/ChatPanel";  // ✅ নতুন
 import { UserRole } from "./types";
 
 import { db } from "./firebase"; 
@@ -15,6 +16,7 @@ const MainContent: React.FC = () => {
   const [isAdminLoggedIn,    setIsAdminLoggedIn]    = useState(false);
   const [isSecretAdminMode,  setIsSecretAdminMode]  = useState(false);
   const [adminClickCount,    setAdminClickCount]    = useState(0);
+  const [showChat,           setShowChat]           = useState(false); // ✅ নতুন
 
   const [students,        setStudents]        = useState<any[]>([]);
   const [teachers,        setTeachers]        = useState<any[]>([]);
@@ -38,6 +40,15 @@ const MainContent: React.FC = () => {
     return () => { unsubStudents(); unsubTeachers(); };
   }, []);
 
+  // ✅ One-time fix: পুরনো localStorage clear করো
+  useEffect(() => {
+    if (!localStorage.getItem('auth_cache_cleared_v1')) {
+      localStorage.removeItem('student_auth');
+      localStorage.removeItem('student_name');
+      localStorage.setItem('auth_cache_cleared_v1', 'true');
+    }
+  }, []);
+
   const handleLogout = () => {
     setCurrentRole(null);
     setIsAdminLoggedIn(false);
@@ -46,6 +57,7 @@ const MainContent: React.FC = () => {
     setLoggedInTeacher(null);
     setAdminClickCount(0);
     setImpersonatedUser(null);
+    setShowChat(false); // ✅ logout এ chat বন্ধ
   };
 
   const handleAdminLogin = (pass: string) => {
@@ -55,6 +67,25 @@ const MainContent: React.FC = () => {
       alert(language === 'bn' ? "ভুল পাসওয়ার্ড!" : "Wrong Password!");
     }
   };
+
+  // ✅ কে login করেছে
+  const isLoggedIn = isAdminLoggedIn || !!loggedInTeacher || !!loggedInStudent;
+
+  // ✅ current chat user
+  const currentChatUser = isAdminLoggedIn
+    ? { id: 'admin', name: 'Admin', role: 'admin' as const }
+    : loggedInTeacher
+    ? { id: loggedInTeacher.id, name: loggedInTeacher.name, role: 'teacher' as const }
+    : loggedInStudent
+    ? { id: loggedInStudent.id, name: loggedInStudent.name, role: 'student' as const }
+    : null;
+
+  // ✅ সব user একসাথে
+  const allChatUsers = [
+    { id: 'admin', name: 'Admin', role: 'admin' as const },
+    ...teachers.map(t => ({ id: t.id, name: t.name, role: 'teacher' as const })),
+    ...students.map(s => ({ id: s.id, name: s.name, role: 'student' as const })),
+  ];
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -92,7 +123,7 @@ const MainContent: React.FC = () => {
         </div>
       )}
 
-      {/* ── Navbar (impersonation mode এ hide) ──────────────── */}
+      {/* ── Navbar ──────────────────────────────────────────── */}
       {!impersonatedUser && (
         <nav className="sticky top-0 z-[60] bg-white/80 backdrop-blur-md border-b border-slate-100 px-4 md:px-8 py-4 flex justify-between items-center shadow-sm">
           <div onClick={handleLogout} className="flex items-center space-x-4 cursor-pointer group select-none">
@@ -104,16 +135,31 @@ const MainContent: React.FC = () => {
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-1">Smart Assessment System</p>
             </div>
           </div>
-          <div className="flex items-center space-x-2 bg-slate-100 p-1 rounded-xl">
-            <button onClick={() => setLanguage('bn')} className={`px-4 py-1.5 rounded-lg text-xs font-black transition-all ${language === 'bn' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}>বাং</button>
-            <button onClick={() => setLanguage('en')} className={`px-4 py-1.5 rounded-lg text-xs font-black transition-all ${language === 'en' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}>EN</button>
+
+          <div className="flex items-center gap-3">
+
+            {/* ✅ Chat button — শুধু login অবস্থায় দেখাবে */}
+            {isLoggedIn && (
+              <button
+                onClick={() => setShowChat(true)}
+                className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white text-lg hover:bg-indigo-700 transition-all active:scale-95 shadow-lg shadow-indigo-100"
+                title="চ্যাট"
+              >
+                💬
+              </button>
+            )}
+
+            <div className="flex items-center space-x-2 bg-slate-100 p-1 rounded-xl">
+              <button onClick={() => setLanguage('bn')} className={`px-4 py-1.5 rounded-lg text-xs font-black transition-all ${language === 'bn' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}>বাং</button>
+              <button onClick={() => setLanguage('en')} className={`px-4 py-1.5 rounded-lg text-xs font-black transition-all ${language === 'en' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}>EN</button>
+            </div>
           </div>
         </nav>
       )}
 
       <main className="animate-in fade-in duration-1000">
 
-        {/* ১. Impersonation — admin directly student/teacher account এ */}
+        {/* ১. Impersonation */}
         {impersonatedUser && impersonatedUser.role === 'teacher' && (
           <TeacherPanel
             onBack={() => setImpersonatedUser(null)}
@@ -180,6 +226,16 @@ const MainContent: React.FC = () => {
           />
         )}
       </main>
+
+      {/* ✅ Chat Panel — শুধু login এবং showChat=true হলে */}
+      {showChat && currentChatUser && (
+        <ChatPanel
+          currentUser={currentChatUser}
+          allUsers={allChatUsers}
+          onClose={() => setShowChat(false)}
+        />
+      )}
+
     </div>
   );
 };
