@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { Class, Subject, Chapter, Question, Teacher } from '../../types';
 import { useApp } from "../../store";
 import { db } from "../../firebase";
-import { collection, onSnapshot, doc, updateDoc, getDocs, deleteDoc, query, where } from "firebase/firestore";
+import { collection, onSnapshot, doc, updateDoc, getDocs, deleteDoc, query, where, addDoc, serverTimestamp } from "firebase/firestore";
 
 interface MasterRegistryProps {
   activeTab: string;
@@ -235,9 +235,50 @@ const MasterRegistry: React.FC<MasterRegistryProps> = ({
 
   const [showDuplicates, setShowDuplicates] = useState(false);
 
+  // ✅ Student Create Form state
+  const [showCreateStudent, setShowCreateStudent] = useState(false);
+  const [newStudentName,    setNewStudentName]    = useState('');
+  const [newStudentPass,    setNewStudentPass]    = useState('');
+  const [studentSearch,     setStudentSearch]     = useState('');
+  const [isCreating,        setIsCreating]        = useState(false);
+
+  const handleCreateStudent = async () => {
+    const name = newStudentName.trim();
+    const pass = newStudentPass.trim();
+    if (!name || !pass) { alert('নাম ও পাসওয়ার্ড দিন!'); return; }
+    if (pass.length < 4) { alert('পাসওয়ার্ড কমপক্ষে ৪ অক্ষরের হতে হবে!'); return; }
+    const exists = liveStudents.some(s => s.name.toLowerCase() === name.toLowerCase());
+    if (exists) { alert('এই নামে ইতিমধ্যে account আছে!'); return; }
+    setIsCreating(true);
+    try {
+      await addDoc(collection(db, 'students'), {
+        name, password: pass, role: 'student',
+        createdAt: serverTimestamp(),
+        isFrozen: false, totalPoints: 0, quizzesPlayed: 0,
+        createdByAdmin: true,
+      });
+      setNewStudentName(''); setNewStudentPass('');
+      setShowCreateStudent(false);
+      alert(`✅ "${name}" এর account তৈরি হয়েছে!`);
+    } catch (err) {
+      alert('Account তৈরি করতে সমস্যা হয়েছে!');
+      console.error(err);
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
   const sortedStudents = useMemo(() =>
     [...liveStudents].sort((a, b) => (studentStats[b.name]?.points || 0) - (studentStats[a.name]?.points || 0)),
   [liveStudents, studentStats]);
+
+  // ✅ FIX: sortedStudents এর পরে define করো
+  const filteredStudents = studentSearch
+    ? liveStudents.filter(s => s.name.toLowerCase().includes(studentSearch.toLowerCase()))
+    : liveStudents;
+  const filteredSortedStudents = studentSearch
+    ? sortedStudents.filter(s => s.name.toLowerCase().includes(studentSearch.toLowerCase()))
+    : sortedStudents;
 
   const currentData = useMemo(() => {
     switch (activeTab) {
@@ -534,13 +575,34 @@ const MasterRegistry: React.FC<MasterRegistryProps> = ({
       )}
 
       {/* ══ Header ══════════════════════════════════════════ */}
-      <div className="px-8 py-4 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10 shrink-0">
+      <div className="px-8 py-4 border-b border-slate-100 flex flex-wrap justify-between items-center bg-white sticky top-0 z-10 shrink-0 gap-3">
         <h4 className="font-black text-slate-800 uppercase text-xs tracking-widest flex items-center gap-2">
           <span className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse" />
           Viewing: <span className="text-indigo-600">{activeTab}</span>
         </h4>
-        <div className="text-[10px] font-black bg-slate-100 px-4 py-1.5 rounded-full text-slate-500 uppercase">
-          Records: {currentData.length}
+        <div className="flex items-center gap-2">
+          {/* ✅ Student search */}
+          {(activeTab === 'REGISTRY' || activeTab === 'STUDENT') && (
+            <input
+              type="text"
+              placeholder="🔍 Student খুঁজুন..."
+              value={studentSearch}
+              onChange={e => setStudentSearch(e.target.value)}
+              className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:border-indigo-300 w-40"
+            />
+          )}
+          {/* ✅ Create Student button */}
+          {activeTab === 'REGISTRY' && (
+            <button
+              onClick={() => setShowCreateStudent(true)}
+              className="px-4 py-1.5 bg-emerald-600 text-white rounded-xl font-black text-[10px] uppercase hover:bg-emerald-700 transition-all active:scale-95 shadow-sm"
+            >
+              + নতুন Student
+            </button>
+          )}
+          <div className="text-[10px] font-black bg-slate-100 px-4 py-1.5 rounded-full text-slate-500 uppercase">
+            Records: {currentData.length}
+          </div>
         </div>
       </div>
 
@@ -587,12 +649,12 @@ const MasterRegistry: React.FC<MasterRegistryProps> = ({
         ))}
 
         {/* STUDENTS (STUDENT tab — ranked) */}
-        {activeTab === 'STUDENT' && sortedStudents.map((user, index) => (
+        {activeTab === 'STUDENT' && filteredSortedStudents.map((user, index) => (
           <StudentCard key={user.id} user={user} index={index} showRank={true} />
         ))}
 
         {/* STUDENTS (REGISTRY tab) */}
-        {activeTab === 'REGISTRY' && liveStudents.map((user, index) => (
+        {activeTab === 'REGISTRY' && filteredStudents.map((user, index) => (
           <StudentCard key={`s-${user.id}`} user={user} index={index} showRank={false} />
         ))}
 
@@ -991,6 +1053,62 @@ const MasterRegistry: React.FC<MasterRegistryProps> = ({
           </div>
         </div>
       )}
+      {/* ✅ Create Student Modal */}
+      {showCreateStudent && (
+        <div className="fixed inset-0 z-[200] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 font-['Hind_Siliguri']">
+          <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-sm p-8">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="font-black text-slate-800 text-xl">👤 নতুন Student</h3>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Admin দ্বারা Account তৈরি</p>
+              </div>
+              <button onClick={() => { setShowCreateStudent(false); setNewStudentName(''); setNewStudentPass(''); }}
+                className="w-8 h-8 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400 hover:bg-slate-200 transition-all">✕</button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1.5">Student এর নাম</label>
+                <input
+                  type="text"
+                  placeholder="পুরো নাম লিখুন"
+                  value={newStudentName}
+                  onChange={e => setNewStudentName(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:border-emerald-400 transition-all placeholder:text-slate-300"
+                  onKeyDown={e => e.key === 'Enter' && handleCreateStudent()}
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1.5">পাসওয়ার্ড</label>
+                <input
+                  type="text"
+                  placeholder="কমপক্ষে ৪ অক্ষর"
+                  value={newStudentPass}
+                  onChange={e => setNewStudentPass(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:border-emerald-400 transition-all placeholder:text-slate-300"
+                  onKeyDown={e => e.key === 'Enter' && handleCreateStudent()}
+                />
+                <p className="text-[9px] font-bold text-slate-400 mt-1 ml-1">⚠️ Student কে এই পাসওয়ার্ড জানাতে হবে</p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => { setShowCreateStudent(false); setNewStudentName(''); setNewStudentPass(''); }}
+                className="flex-1 py-3 bg-slate-100 text-slate-600 rounded-2xl font-black text-sm hover:bg-slate-200 transition-all">
+                বাতিল
+              </button>
+              <button
+                onClick={handleCreateStudent}
+                disabled={isCreating || !newStudentName.trim() || !newStudentPass.trim()}
+                className="flex-1 py-3 bg-emerald-600 text-white rounded-2xl font-black text-sm hover:bg-emerald-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-emerald-100">
+                {isCreating ? '⏳ তৈরি হচ্ছে...' : '✅ Account তৈরি করুন'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
