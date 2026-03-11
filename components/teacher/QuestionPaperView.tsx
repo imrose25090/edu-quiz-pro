@@ -238,13 +238,9 @@ export const QuestionPaperView: React.FC<QuestionPaperViewProps> = ({
   return (
     <div className="flex h-screen bg-slate-200 overflow-hidden font-['Hind_Siliguri'] relative">
 
-      {/* ── Icon Rail ─────────────────────────────────────── */}
+      {/* ══ DESKTOP: Icon Rail ════════════════════════════════ */}
       <div className="hidden md:flex w-14 bg-white border-r border-slate-200 flex-col items-center py-3 gap-1 shadow-sm no-print shrink-0">
-        <button
-          onClick={onBack}
-          className="mb-3 p-2 rounded-xl hover:bg-slate-100 text-slate-400 transition-all"
-          title="Back"
-        >
+        <button onClick={onBack} className="mb-3 p-2 rounded-xl hover:bg-slate-100 text-slate-400 transition-all" title="Back">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
@@ -257,34 +253,8 @@ export const QuestionPaperView: React.FC<QuestionPaperViewProps> = ({
         <TabBtn id="theme"    icon="🎨" label="Theme"  />
       </div>
 
-      {/* ── Sidebar Panel ─────────────────────────────────── */}
-      {/* Mobile overlay */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 bg-black/40 z-40 md:hidden" onClick={() => setSidebarOpen(false)} />
-      )}
-      <div className={`
-        fixed md:relative top-0 left-0 h-full z-50 md:z-auto
-        w-72 md:w-60 bg-white border-r border-slate-200 overflow-y-auto py-3 px-3 no-print shrink-0
-        transition-transform duration-300
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-      `}>
-      {/* Mobile close button */}
-      <div className="flex justify-between items-center mb-3 md:hidden">
-        <span className="text-xs font-black text-slate-600 uppercase tracking-widest">Settings</span>
-        <button onClick={() => setSidebarOpen(false)} className="w-8 h-8 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400">✕</button>
-      </div>
-      {/* Mobile tab icons */}
-      <div className="flex gap-1 mb-3 md:hidden">
-        {([
-          {id:'branding',icon:'🏫'},{id:'page',icon:'📄'},{id:'font',icon:'𝐓'},
-          {id:'layout',icon:'⬛'},{id:'header',icon:'🔝'},{id:'theme',icon:'🎨'}
-        ] as const).map(t => (
-          <button key={t.id} onClick={() => setActiveTab(t.id as any)}
-            className={`flex-1 py-1.5 rounded-lg text-sm transition-all ${activeTab===t.id?'bg-indigo-600':'bg-slate-100'}`}>
-            {t.icon}
-          </button>
-        ))}
-      </div>
+      {/* ══ DESKTOP: Sidebar ══════════════════════════════════ */}
+      <div className="hidden md:block w-60 bg-white border-r border-slate-200 overflow-y-auto py-3 px-3 no-print shrink-0">
 
         {/* BRANDING */}
         {activeTab === 'branding' && <>
@@ -474,7 +444,223 @@ export const QuestionPaperView: React.FC<QuestionPaperViewProps> = ({
             Reset Colors
           </button>
         </>}
-      </div>
+      </div>{/* /desktop-sidebar */}
+
+      {/* ══ MOBILE: Bottom Sheet ══════════════════════════════ */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setSidebarOpen(false)} />
+      )}
+      <div className={`fixed bottom-0 left-0 right-0 md:hidden z-50 bg-white rounded-t-3xl shadow-2xl no-print flex flex-col transition-transform duration-300 ease-out ${sidebarOpen ? 'translate-y-0' : 'translate-y-full'}`}
+        style={{ maxHeight: '72vh' }}>
+        {/* Drag handle */}
+        <div className="flex justify-center pt-3 shrink-0">
+          <div className="w-10 h-1.5 bg-slate-300 rounded-full" />
+        </div>
+        {/* Sheet header + tab strip */}
+        <div className="px-4 pt-2 pb-3 border-b border-slate-100 shrink-0">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-black text-slate-700 uppercase tracking-widest">⚙️ Edit Options</p>
+            <button onClick={() => setSidebarOpen(false)} className="w-8 h-8 bg-slate-100 rounded-xl flex items-center justify-center text-slate-500 text-sm font-black">✕</button>
+          </div>
+          <div className="grid grid-cols-6 gap-1.5">
+            {([
+              { id:'branding' as const, icon:'🏫', label:'Brand'  },
+              { id:'page'     as const, icon:'📄', label:'Page'   },
+              { id:'font'     as const, icon:'𝐓',  label:'Font'   },
+              { id:'layout'   as const, icon:'⬛', label:'Layout' },
+              { id:'header'   as const, icon:'🔝', label:'Header' },
+              { id:'theme'    as const, icon:'🎨', label:'Theme'  },
+            ]).map(t => (
+              <button key={t.id} onClick={() => setActiveTab(t.id)}
+                className={`flex flex-col items-center gap-0.5 py-2 rounded-2xl text-[9px] font-black transition-all ${activeTab === t.id ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 text-slate-500'}`}>
+                <span className="text-base leading-none">{t.icon}</span>
+                <span>{t.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+        {/* Scrollable settings content */}
+        <div className="flex-1 overflow-y-auto px-4 py-3">
+
+          {activeTab === 'branding' && <>
+            <ST>Institution</ST>
+            <input className="w-full p-3 bg-slate-50 border rounded-2xl text-sm font-bold text-black outline-none focus:ring-2 ring-indigo-500 mb-2"
+              value={paperName} onChange={e => setPaperName(e.target.value)} placeholder="School / Coaching Name" />
+            <input className="w-full p-3 bg-slate-50 border rounded-2xl text-sm font-bold text-black outline-none focus:ring-2 ring-indigo-500"
+              value={paperMotto} onChange={e => setPaperMotto(e.target.value)} placeholder="Motto / Tagline" />
+            <ST>Logo</ST>
+            <Row label="Show Logo"><Toggle val={showLogo} set={setShowLogo} /></Row>
+            {showLogo && (
+              <label className="block w-full cursor-pointer mt-1">
+                <div className="w-full py-3 border-2 border-dashed border-indigo-300 rounded-2xl text-center text-sm font-bold text-indigo-500">
+                  {logoBase64 ? '✅ Logo Uploaded' : '📁 Upload Logo'}
+                </div>
+                <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+              </label>
+            )}
+          </>}
+
+          {activeTab === 'page' && <>
+            <ST>Paper Size</ST>
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              {Object.entries(PAPER_SIZES).map(([k, v]) => (
+                <button key={k} onClick={() => setPaperSize(k as any)}
+                  className={`py-3 rounded-2xl text-sm font-black border transition-all active:scale-95 ${paperSize === k ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                  {v.label}
+                </button>
+              ))}
+            </div>
+            <ST>Orientation</ST>
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              {(['portrait','landscape'] as const).map(o => (
+                <button key={o} onClick={() => setOrientation(o)}
+                  className={`py-3 rounded-2xl text-sm font-black border transition-all active:scale-95 ${orientation === o ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                  {o === 'portrait' ? '📄 Portrait' : '🖼️ Landscape'}
+                </button>
+              ))}
+            </div>
+            <ST>Margins (px)</ST>
+            <Slider label="Top"    val={marginTop}    set={setMarginTop}    min={0} max={80} unit="px" />
+            <Slider label="Bottom" val={marginBottom} set={setMarginBottom} min={0} max={80} unit="px" />
+            <Slider label="Left"   val={marginLeft}   set={setMarginLeft}   min={0} max={80} unit="px" />
+            <Slider label="Right"  val={marginRight}  set={setMarginRight}  min={0} max={80} unit="px" />
+            <ST>Preview Zoom</ST>
+            <Slider label="Zoom" val={zoom} set={setZoom} min={20} max={100} unit="%" />
+          </>}
+
+          {activeTab === 'font' && <>
+            <ST>Typeface</ST>
+            <select value={font} onChange={e => setFont(e.target.value)}
+              className="w-full p-3 bg-slate-50 border rounded-2xl text-sm font-bold text-black mb-3">
+              {FONTS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+            </select>
+            <ST>Sizes</ST>
+            <Slider label="Body Text"    val={fontSize}    set={setFontSize}    min={8}   max={24}  unit="px" />
+            <Slider label="Line Spacing" val={lineSpacing} set={setLineSpacing} min={1}   max={3}   step={0.05} />
+            <Slider label="Header"       val={headerSize}  set={setHeaderSize}  min={16}  max={56}  unit="px" />
+            <Slider label="Sub-header"   val={subheadSize} set={setSubheadSize} min={9}   max={20}  unit="px" />
+            <Slider label="Q Gap"        val={questionGap} set={setQuestionGap} min={4}   max={48}  unit="px" />
+            <ST>Style</ST>
+            <div className="flex gap-2 mb-3">
+              {[
+                { l:'B', v:boldQ,      s:setBoldQ,      cls:'font-black' },
+                { l:'I', v:italicQ,    s:setItalicQ,    cls:'italic'     },
+                { l:'U', v:underlineQ, s:setUnderlineQ, cls:'underline'  },
+              ].map(({ l, v, s, cls }) => (
+                <button key={l} onClick={() => s(!v)}
+                  className={`w-12 h-12 rounded-2xl border text-base font-black transition-all active:scale-95 ${cls} ${v ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                  {l}
+                </button>
+              ))}
+            </div>
+            <ST>Alignment</ST>
+            <div className="flex gap-2">
+              {(['left','center','right','justify'] as const).map(a => (
+                <button key={a} onClick={() => setTextAlign(a)}
+                  className={`flex-1 py-3 rounded-2xl text-base font-black border transition-all active:scale-95 ${textAlign === a ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                  {a==='left'?'⬅':a==='center'?'↔':a==='right'?'➡':'≡'}
+                </button>
+              ))}
+            </div>
+          </>}
+
+          {activeTab === 'layout' && <>
+            <ST>Columns</ST>
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              {[1,2].map(c => (
+                <button key={c} onClick={() => setColumns(c)}
+                  className={`py-3 rounded-2xl text-sm font-black border transition-all active:scale-95 ${columns===c?'bg-indigo-600 text-white border-indigo-600':'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                  {c} Col{c>1?'s':''}
+                </button>
+              ))}
+            </div>
+            <ST>Numbering</ST>
+            <select value={numberStyle} onChange={e => setNumberStyle(e.target.value)}
+              className="w-full p-3 bg-slate-50 border rounded-2xl text-sm font-bold text-black mb-3">
+              <option value="decimal">1, 2, 3 …</option>
+              <option value="upper-roman">I, II, III …</option>
+              <option value="lower-alpha">a, b, c …</option>
+              <option value="upper-alpha">A, B, C …</option>
+            </select>
+            <ST>MCQ Option Layout</ST>
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              {(['1col','2col','4col'] as const).map(o => (
+                <button key={o} onClick={() => setOptionLayout(o)}
+                  className={`py-3 rounded-2xl text-sm font-black border transition-all active:scale-95 ${optionLayout===o?'bg-indigo-600 text-white border-indigo-600':'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                  {o==='1col'?'1 col':o==='2col'?'2 col':'4 col'}
+                </button>
+              ))}
+            </div>
+            <ST>Visibility</ST>
+            <Row label="Show Marks">   <Toggle val={showMarks}   set={setShowMarks}   /></Row>
+            <Row label="Show Options"> <Toggle val={showOptions} set={setShowOptions} /></Row>
+            <Row label="Q Border">     <Toggle val={showBorder}  set={setShowBorder}  /></Row>
+          </>}
+
+          {activeTab === 'header' && <>
+            <ST>Header</ST>
+            <Row label="Header Border"><Toggle val={showHeaderBorder} set={setShowHeaderBorder} /></Row>
+            <ST>Instructions</ST>
+            <Row label="Show"><Toggle val={showInstructions} set={setShowInstructions} /></Row>
+            {showInstructions && (
+              <textarea rows={3}
+                className="w-full p-3 bg-slate-50 border rounded-2xl text-sm font-bold text-black outline-none resize-none mb-2"
+                value={instructions} onChange={e => setInstructions(e.target.value)} />
+            )}
+            <ST>Footer</ST>
+            <Row label="Quote">     <Toggle val={showQuote}     set={setShowQuote}     /></Row>
+            {showQuote && (
+              <input className="w-full p-3 bg-slate-50 border rounded-2xl text-sm font-bold text-black outline-none mb-2"
+                value={quote} onChange={e => setQuote(e.target.value)} />
+            )}
+            <Row label="Signature"> <Toggle val={showSignature} set={setShowSignature} /></Row>
+            <Row label="EduQuiz">   <Toggle val={showBrand}     set={setShowBrand}     /></Row>
+            <Row label="Page No.">  <Toggle val={showPageNum}   set={setShowPageNum}   /></Row>
+            <ST>Custom Footer</ST>
+            <input className="w-full p-3 bg-slate-50 border rounded-2xl text-sm font-bold text-black outline-none mb-2"
+              value={customFooter} onChange={e => setCustomFooter(e.target.value)} placeholder="Optional footer text" />
+            <ST>Watermark</ST>
+            <Row label="Show"><Toggle val={showWatermark} set={setShowWatermark} /></Row>
+            {showWatermark && (
+              <input className="w-full p-3 bg-slate-50 border rounded-2xl text-sm font-bold text-black outline-none"
+                value={watermarkText} onChange={e => setWatermarkText(e.target.value)} placeholder="CONFIDENTIAL" />
+            )}
+          </>}
+
+          {activeTab === 'theme' && <>
+            <ST>Color Theme</ST>
+            <div className="space-y-2 mb-3">
+              {Object.entries(THEMES).map(([k, v]) => (
+                <button key={k} onClick={() => setTheme(k as any)}
+                  className={`w-full flex items-center gap-3 p-3 rounded-2xl border transition-all active:scale-95 ${theme===k?'border-indigo-400 bg-indigo-50':'border-slate-200 bg-slate-50'}`}>
+                  <div className="flex gap-1.5">
+                    <div className="w-5 h-5 rounded-full border-2 border-white shadow" style={{ backgroundColor: v.primary }} />
+                    <div className="w-5 h-5 rounded-full border-2 border-white shadow" style={{ backgroundColor: v.accent  }} />
+                  </div>
+                  <span className="text-sm font-black text-slate-700 capitalize">{k}</span>
+                  {theme === k && <span className="ml-auto text-indigo-500 font-black">✓</span>}
+                </button>
+              ))}
+            </div>
+            <ST>Custom Colors</ST>
+            <Row label="Primary">
+              <input type="color" value={customPrimary || T.primary}
+                onChange={e => setCustomPrimary(e.target.value)}
+                className="w-14 h-10 rounded-xl cursor-pointer border" />
+            </Row>
+            <Row label="Accent">
+              <input type="color" value={customAccent || T.accent}
+                onChange={e => setCustomAccent(e.target.value)}
+                className="w-14 h-10 rounded-xl cursor-pointer border" />
+            </Row>
+            <button onClick={() => { setCustomPrimary(''); setCustomAccent(''); }}
+              className="w-full py-2 text-xs font-black text-slate-400 uppercase hover:text-slate-600 transition-all mt-1">
+              Reset Colors
+            </button>
+          </>}
+
+        </div>
+      </div>{/* /mobile-bottom-sheet */}
 
       {/* ── Main Content ──────────────────────────────────── */}
       <div className="flex-1 flex flex-col overflow-hidden">
