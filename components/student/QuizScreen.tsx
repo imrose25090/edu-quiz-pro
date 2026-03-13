@@ -1,3 +1,4 @@
+import { WaterfallTimer } from "./WaterfallTimer";
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 
 interface QuizScreenProps {
@@ -114,60 +115,14 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({
   return (
     <div className="max-w-4xl mx-auto px-4 md:px-0 space-y-8 font-['Hind_Siliguri'] pb-20 animate-in fade-in duration-500">
 
-      {/* ══ FLOATING DRAGGABLE TIMER ══════════════════════════ */}
-      <div
-        ref={timerRef}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
-        style={{
-          position:  'fixed',
-          left:      pos.x,
-          top:       pos.y,
-          zIndex:    9999,
-          cursor:    dragging ? 'grabbing' : 'grab',
-          touchAction: 'none',        // prevents scroll while dragging on mobile
-          userSelect: 'none',
-          transition: dragging ? 'none' : 'box-shadow 0.2s',
-        }}
-        className={`select-none rounded-[22px] shadow-2xl border px-5 py-3 flex items-center gap-3
-          ${isCritical
-            ? 'bg-rose-600 border-rose-400 animate-pulse'
-            : isLowTime
-              ? 'bg-orange-500 border-orange-300'
-              : 'bg-slate-900 border-indigo-500/30'}
-          ${dragging ? 'scale-105 shadow-[0_12px_40px_rgba(0,0,0,0.35)]' : ''}
-        `}
-      >
-        {/* drag handle dots */}
-        <div className="flex flex-col gap-[3px] opacity-40">
-          {[0,1,2].map(i => (
-            <div key={i} className="flex gap-[3px]">
-              <div className="w-1 h-1 bg-white rounded-full" />
-              <div className="w-1 h-1 bg-white rounded-full" />
-            </div>
-          ))}
-        </div>
-
-        <div className="flex flex-col items-center leading-none">
-          <span className="text-[9px] font-black text-white/50 uppercase tracking-widest mb-0.5">
-            {isCritical ? '⚠️ শেষ হচ্ছে' : isLowTime ? '⏳ কম সময়' : '⏱ সময়'}
-          </span>
-          <span className="font-mono text-2xl font-black text-white tracking-tight">
-            {mins}:{secs}
-          </span>
-        </div>
-
-        <div className="flex flex-col items-center leading-none opacity-60">
-          <span className="text-[9px] font-black text-white uppercase tracking-widest mb-0.5">
-            উত্তর
-          </span>
-          <span className="text-lg font-black text-white">
-            {answeredCount}/{totalCount}
-          </span>
-        </div>
-      </div>
+      {/* ══ WATERFALL TIMER ══════════════════════════════════ */}
+      <WaterfallTimer
+        timerRef={timerRef} pos={pos} dragging={dragging}
+        onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp}
+        mins={mins} secs={secs}
+        isCritical={isCritical} isLowTime={isLowTime}
+        answeredCount={answeredCount} totalCount={totalCount}
+      />
 
       {/* ══ STICKY HEADER ═════════════════════════════════════ */}
       <div className="flex justify-between items-center bg-white/90 backdrop-blur-md p-4 md:p-6 rounded-[32px] shadow-xl border border-white sticky top-4 z-40">
