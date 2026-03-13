@@ -253,7 +253,7 @@ interface StudentLoginProps {
   onBack: () => void;
   students: any[];
   onRegister?: (name: string, pass: string) => void;      // optional — admin impersonation এ নেই
-  onStudentLogin?: (name: string, pass: string) => boolean; // optional — admin impersonation এ নেই
+  onStudentLogin?: (name: string, pass: string) => boolean | Promise<boolean>; // optional — admin impersonation এ নেই
   isAlreadyAuth?: boolean;
 }
 
@@ -296,11 +296,11 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({
   const [isNewUser,  setIsNewUser]  = useState(false);
   const [password,   setPassword]   = useState('');
 
-  // ✅ FIX 1: isAlreadyAuth prop change হলে isLoggedIn ও update হবে
-  const [isLoggedIn, setIsLoggedIn] = useState(isAlreadyAuth);
-  useEffect(() => {
-    if (isAlreadyAuth) setIsLoggedIn(true);
-  }, [isAlreadyAuth]);
+  // ✅ FIX: isAdminView শুধু admin impersonation এ true (onStudentLogin নেই)
+  const isAdminView = !onStudentLogin;
+
+  // ✅ FIX: isAlreadyAuth state নেই — StudentPanel এর isAlreadyAuth prop ই সত্য
+  // Login হলে StudentPanel setIsAuth(true) করবে → isAlreadyAuth=true আসবে → re-render হবে
 
   const [totalPoints, setTotalPoints] = useState(0);
   const [globalRank,  setGlobalRank]  = useState(0);
@@ -317,7 +317,7 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({
   const [viewingAttempt, setViewingAttempt] = useState<any | null>(null);
 
   // ── Auth ──────────────────────────────────────────────────
-  const handleAction = (e: React.FormEvent) => {
+  const handleAction = async (e: React.FormEvent) => {
     e.preventDefault();
     const name = studentName.trim();
     const pass = password.trim();
@@ -342,20 +342,17 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({
     } else {
       // ✅ FIX 2: onStudentLogin optional check
       if (!onStudentLogin) return;
-      const ok = onStudentLogin(name, pass);
-      if (ok) {
-        setIsLoggedIn(true);
-        localStorage.setItem('student_auth', 'true');
-        localStorage.setItem('student_name', name);
-      } else {
+      const ok = await onStudentLogin(name, pass);
+      if (!ok) {
         alert('ভুল নাম অথবা পাসওয়ার্ড!');
       }
+      // ✅ success হলে StudentPanel isAuth set করবে → isAlreadyAuth=true prop আসবে → re-render
     }
   };
 
   // ── Live data ─────────────────────────────────────────────
   useEffect(() => {
-    if (!isLoggedIn || !studentName) return;
+    if (!isAlreadyAuth || !studentName) return;
     // ✅ subcollection থেকে attempts load করো
     const unsub = onSnapshot(query(collection(db, 'quizzes')), async (snap) => {
       const ptsMap: Record<string, number> = {};
@@ -393,7 +390,7 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({
       setHistory(myHist.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
     });
     return () => unsub();
-  }, [isLoggedIn, studentName]);
+  }, [isAlreadyAuth, studentName]);
 
   const earnedBadges = BADGES.filter(b => b.req(totalPoints, history.length));
   const nextBadge    = BADGES.find(b => !b.req(totalPoints, history.length));
@@ -402,7 +399,7 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({
   // ════════════════════════════════════════════════════
   // LOGIN SCREEN
   // ════════════════════════════════════════════════════
-  if (!isLoggedIn) return (
+  if (!isAlreadyAuth) return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 font-['Hind_Siliguri']">
       <div className="w-full max-w-sm">
         <div className="text-center mb-10">
@@ -459,14 +456,14 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({
             <span className="text-white font-black text-sm">{studentName[0]?.toUpperCase()}</span>
           </div>
           <p className="text-slate-800 font-black text-lg leading-none">{studentName}</p>
-          {/* ✅ admin impersonation badge */}
-          {isAlreadyAuth && (
+          {/* ✅ admin impersonation badge — শুধু real admin impersonation এ */}
+          {isAdminView && (
             <span className="text-[9px] font-black bg-rose-100 text-rose-500 px-2 py-0.5 rounded-full uppercase">Admin View</span>
           )}
         </div>
         <button onClick={onBack}
           className="text-sm font-bold text-slate-400 hover:text-rose-500 transition-colors px-3 py-1.5 rounded-xl hover:bg-rose-50">
-          {isAlreadyAuth ? 'Admin এ ফিরুন' : 'লগআউট'}
+          {isAdminView ? 'Admin এ ফিরুন' : 'লগআউট'}
         </button>
       </div>
 
