@@ -185,9 +185,16 @@ const CallModal: React.FC<CallModalProps> = ({
             if (d?.status === 'ended') endCall();
           });
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('WebRTC error:', err);
-        alert('মিডিয়া access করতে পারছে না। Permission দিন।');
+        // Permission denied বা device না থাকলে gracefully বন্ধ করো
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          alert('⚠️ Microphone/Camera permission দিন। Browser এর address bar এ 🔒 icon এ click করুন।');
+        } else if (err.name === 'NotFoundError') {
+          alert('⚠️ Microphone বা Camera পাওয়া যাচ্ছে না। Device connect করুন।');
+        } else {
+          alert('⚠️ Call করতে সমস্যা হয়েছে: ' + err.message);
+        }
         onEnd();
       }
     };
@@ -341,28 +348,33 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ currentUser, allUsers, onC
   }, [activeConvId]);
 
   // Incoming call listener
+  const shownCallIds = React.useRef<Set<string>>(new Set());
   useEffect(() => {
     const callsRef = collection(db, 'calls');
     const unsub = onSnapshot(callsRef, snap => {
       snap.docChanges().forEach(change => {
-        if (change.type === 'modified' || change.type === 'added') {
-          const data = change.doc.data();
-          if (
-            data.calleeId === currentUser.id &&
-            data.status === 'calling' &&
-            !callModal
-          ) {
-            setIncomingCall({
-              type: data.callType || 'voice',
-              callerName: data.callerName,
-              convId: change.doc.id,
-            });
-          }
+        const data = change.doc.data();
+        const callId = change.doc.id;
+        if (
+          data.calleeId === currentUser.id &&
+          data.status === 'calling' &&
+          !shownCallIds.current.has(callId)
+        ) {
+          shownCallIds.current.add(callId);
+          setIncomingCall({
+            type: data.callType || 'voice',
+            callerName: data.callerName,
+            convId: callId,
+          });
+        }
+        // call শেষ হলে id সরিয়ে দাও যাতে পরে আবার call করা যায়
+        if (data.status === 'ended') {
+          shownCallIds.current.delete(callId);
         }
       });
     });
     return () => unsub();
-  }, [currentUser.id, callModal]);
+  }, [currentUser.id]);
 
   // Auto scroll
   useEffect(() => {
@@ -410,6 +422,10 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ currentUser, allUsers, onC
   const startCall = async (type: 'voice' | 'video') => {
     if (!activeConvId || !activeOtherUser) return;
 
+    // ✅ FIX: আগে check করো call আগে থেকে চলছে কিনা
+    const existingCall = await getDoc(doc(db, 'calls', activeConvId));
+    if (existingCall.exists() && existingCall.data()?.status === 'calling') return;
+
     await setDoc(doc(db, 'calls', activeConvId), {
       callType:   type,
       callerId:   currentUser.id,
@@ -431,6 +447,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ currentUser, allUsers, onC
 
     setCallModal({ type, isCaller: true });
   };
+
+  // ✅ FIX: call document এ duplicate message guard
+  const callMessageSentRef = React.useRef<Set<string>>(new Set());
 
   const acceptIncomingCall = () => {
     if (!incomingCall) return;
