@@ -1,74 +1,70 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../firebase';
-import {
-  collection, query, where, getDocs, addDoc,
-  updateDoc, doc, increment, onSnapshot, orderBy
-} from "firebase/firestore";
+import { collection, query, where, getDocs, updateDoc, arrayUnion, doc, increment } from "firebase/firestore";
 
 import { StudentLogin } from './student/StudentLogin';
+import { HelloKittyAssistant } from './HelloKittyAssistant';
 import { QuizScreen } from './student/QuizScreen';
 import { QuizResult } from './student/QuizResult';
 
 interface StudentPanelProps {
   onBack: () => void;
   students: any[];
-  onRegister?: (name: string, pass: string) => void;
-  onStudentLogin?: (name: string, pass: string) => boolean;
-  loggedInStudent?: any | null;
+  onRegister: (name: string, pass: string) => void;
+  onStudentLogin: (name: string, pass: string) => boolean;
 }
 
 const StudentPanel: React.FC<StudentPanelProps> = ({
-  onBack, students, onRegister, onStudentLogin, loggedInStudent
+  onBack, students, onRegister, onStudentLogin
 }) => {
-  const [isAuth, setIsAuth] = useState(() => {
-    if (loggedInStudent) return true;
-    return localStorage.getItem('student_auth') === 'true';
-  });
-  const [studentName, setStudentName] = useState(() => {
-    if (loggedInStudent) return loggedInStudent.name;
-    return localStorage.getItem('student_name') || '';
-  });
+  // ✅ FIX: localStorage blindly trust না করে false দিয়ে শুরু করো
+  const [isAuth,      setIsAuth]      = useState(false);
+  const [studentName, setStudentName] = useState('');
+  const [authChecked, setAuthChecked] = useState(false); // verify শেষ না হওয়া পর্যন্ত loading
 
+  // ✅ Mount এ Firebase verify করো
   useEffect(() => {
-    if (loggedInStudent) { setIsAuth(true); setStudentName(loggedInStudent.name); }
-  }, [loggedInStudent]);
+    const cachedAuth = localStorage.getItem('student_auth') === 'true';
+    const cachedName = (localStorage.getItem('student_name') || '').trim();
+
+    if (!cachedAuth || !cachedName) {
+      setAuthChecked(true);
+      return;
+    }
+
+    getDocs(query(collection(db, 'students'), where('name', '==', cachedName)))
+      .then(snap => {
+        const student = snap.docs[0]?.data();
+        if (!snap.empty && student && !student.isFrozen) {
+          setIsAuth(true);
+          setStudentName(cachedName);
+        } else {
+          // Account নেই বা frozen — cache clear করো
+          localStorage.removeItem('student_auth');
+          localStorage.removeItem('student_name');
+        }
+        setAuthChecked(true);
+      })
+      .catch(() => {
+        localStorage.removeItem('student_auth');
+        localStorage.removeItem('student_name');
+        setAuthChecked(true);
+      });
+  }, []);
 
   const [stage,      setStage]      = useState<'LOGIN' | 'TAKING' | 'RESULT'>('LOGIN');
   const [quizCode,   setQuizCode]   = useState('');
   const [activeQuiz, setActiveQuiz] = useState<any>(null);
   const [answers,    setAnswers]    = useState<Record<string, string>>({});
   const [timeLeft,   setTimeLeft]   = useState(0);
-  // leaderboard — subcollection থেকে real-time
-  const [leaderboard, setLeaderboard] = useState<any[]>([]);
 
-  const hasSubmitted   = useRef(false);
-  const timeLeftRef    = useRef(0);
-  const answersRef     = useRef<Record<string, string>>({});
-  const activeQuizRef  = useRef<any>(null);
-  const studentNameRef = useRef(studentName);
-
-  useEffect(() => { timeLeftRef.current    = timeLeft;    }, [timeLeft]);
-  useEffect(() => { answersRef.current     = answers;     }, [answers]);
-  useEffect(() => { activeQuizRef.current  = activeQuiz;  }, [activeQuiz]);
-  useEffect(() => { studentNameRef.current = studentName; }, [studentName]);
+  // submit lock — একবারের বেশি submit হবে না
+  const hasSubmitted = useRef(false);
 
   const [resData, setResData] = useState({
     score: 0, totalMarks: 0, timeSpent: 0,
     pointsEarned: 0, correctCount: 0, wrongCount: 0, bonusPoints: 0,
   });
-
-  // ── leaderboard real-time listener (RESULT stage এ) ───────
-  useEffect(() => {
-    if (stage !== 'RESULT' || !activeQuiz?.id) return;
-    const unsub = onSnapshot(
-      query(
-        collection(db, 'quizzes', activeQuiz.id, 'attempts'),
-        orderBy('score', 'desc')
-      ),
-      snap => setLeaderboard(snap.docs.map(d => ({ id: d.id, ...d.data() })))
-    );
-    return () => unsub();
-  }, [stage, activeQuiz?.id]);
 
   // ── Auth ──────────────────────────────────────────────────
   const handleProtectedLogin = async (name: string, pass: string) => {
@@ -78,9 +74,10 @@ const StudentPanel: React.FC<StudentPanelProps> = ({
       if (!snap.empty && snap.docs[0].data().isFrozen) {
         alert("Account Frozen!"); return false;
       }
-      const success = onStudentLogin ? onStudentLogin(name, pass) : false;
+      const success = onStudentLogin(name, pass);
       if (success) {
-        setIsAuth(true); setStudentName(name);
+        setIsAuth(true);
+        setStudentName(name);
         localStorage.setItem('student_auth', 'true');
         localStorage.setItem('student_name', name);
       }
@@ -89,17 +86,17 @@ const StudentPanel: React.FC<StudentPanelProps> = ({
   };
 
   const handleLogout = () => {
-    if (!loggedInStudent) {
-      localStorage.removeItem('student_auth');
-      localStorage.removeItem('student_name');
-    }
-    setIsAuth(false); setStudentName(''); onBack();
+    localStorage.removeItem('student_auth');
+    localStorage.removeItem('student_name');
+    setIsAuth(false); setStudentName('');
+    onBack();
   };
 
   const handleGoToStudentHome = () => {
-    setStage('LOGIN'); setQuizCode('');
-    setAnswers({}); setActiveQuiz(null);
-    setLeaderboard([]);
+    setStage('LOGIN');
+    setQuizCode('');
+    setAnswers({});
+    setActiveQuiz(null);
     hasSubmitted.current = false;
   };
 
@@ -113,19 +110,6 @@ const StudentPanel: React.FC<StudentPanelProps> = ({
       if (snap.empty) return alert("ভুল কোড!");
       const docSnap = snap.docs[0];
       const data = docSnap.data();
-
-      // ✅ আগে দিয়েছে কিনা check — subcollection এ studentName খোঁজো
-      const prevAttempt = await getDocs(
-        query(
-          collection(db, "quizzes", docSnap.id, "attempts"),
-          where("studentName", "==", studentNameRef.current.trim())
-        )
-      );
-      if (!prevAttempt.empty) {
-        alert("❌ তুমি এই quiz আগেই দিয়েছ!\n\nএকটি quiz একবারই দেওয়া যাবে।");
-        return;
-      }
-
       hasSubmitted.current = false;
       setActiveQuiz({ id: docSnap.id, ...data });
       setTimeLeft(Number(data.config?.totalTime || 10) * 60);
@@ -133,20 +117,34 @@ const StudentPanel: React.FC<StudentPanelProps> = ({
     } catch { alert("সার্ভার সমস্যা!"); }
   };
 
-  // ── Submit ────────────────────────────────────────────────
-  const handleSubmit = useCallback(async () => {
-    if (!activeQuizRef.current || hasSubmitted.current) return;
-    hasSubmitted.current = true;
+  // ── Timer — শুধু TAKING stage এ চলবে, timeLeft > 0 হলে ─
+  useEffect(() => {
+    if (stage !== 'TAKING') return;
 
-    const quiz        = activeQuizRef.current;
-    const curAnswers  = answersRef.current;
-    const curTimeLeft = timeLeftRef.current;
-    const curName     = studentNameRef.current;
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          handleSubmit();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [stage]); // ← শুধু stage change এ re-run, timeLeft এ না
+
+  // ── Submit ────────────────────────────────────────────────
+  const handleSubmit = async () => {
+    if (!activeQuiz || hasSubmitted.current) return;
+    hasSubmitted.current = true;
 
     let correctCount = 0;
     let wrongCount   = 0;
-    quiz.questions.forEach((q: any) => {
-      const userAns    = String(curAnswers[q.id] || "").trim().toLowerCase();
+
+    activeQuiz.questions.forEach((q: any) => {
+      const userAns    = String(answers[q.id] || "").trim().toLowerCase();
       const correctAns = String(q.answer || q.correctAnswer || "").trim().toLowerCase();
       if (userAns !== "") {
         if (userAns === correctAns) correctCount++;
@@ -154,23 +152,22 @@ const StudentPanel: React.FC<StudentPanelProps> = ({
       }
     });
 
+    // Points: correct=1, wrong=-0.5, min 0
     const basePoints  = Math.max(0, correctCount - wrongCount * 0.5);
-    const scorePercent = quiz.questions.length > 0
-      ? (correctCount / quiz.questions.length) * 100
-      : 0;
-    // ✅ শুধু ৯০%+ পেলে speed bonus পাবে
-    const bonusPoints = scorePercent >= 90 ? Math.floor(curTimeLeft / 60) : 0;
+    // Bonus: প্রতি পূর্ণ মিনিট বাকি থাকলে 1 point
+    const bonusPoints = Math.floor(timeLeft / 60);
     const finalPoints = basePoints + bonusPoints;
-    const totalPossibleMarks = quiz.questions.length;
-    const timeSpent = Math.max(1, (Number(quiz.config?.totalTime || 10) * 60) - curTimeLeft);
+
+    const totalPossibleMarks = activeQuiz.questions.length;
+    const timeSpent = Math.max(1, (Number(activeQuiz.config?.totalTime || 10) * 60) - timeLeft);
 
     const attemptData = {
-      studentName:  curName.trim(),
+      studentName:  studentName.trim(),
       score:        correctCount,
       totalMarks:   totalPossibleMarks,
       submittedAt:  new Date().toISOString(),
       timeSpent,
-      answers:      { ...curAnswers },
+      answers:      { ...answers },
       earnedPoints: finalPoints,
       wrongAnswers: wrongCount,
       bonusPoints,
@@ -183,47 +180,51 @@ const StudentPanel: React.FC<StudentPanelProps> = ({
     });
 
     try {
-      // ✅ Double-submit guard — Firebase এ আবার check করো
-      const existingSnap = await getDocs(
-        query(
-          collection(db, "quizzes", quiz.id, "attempts"),
-          where("studentName", "==", curName.trim())
-        )
-      );
-      if (!existingSnap.empty) {
-        console.warn('[Submit] Duplicate blocked at submit time');
-        setStage('RESULT'); // result দেখাও, save করবে না
-        return;
-      }
+      // Quiz এ attempt save
+      await updateDoc(doc(db, "quizzes", activeQuiz.id), {
+        attempts: arrayUnion(attemptData)
+      });
 
-      // ✅ subcollection এ আলাদা document
-      await addDoc(
-        collection(db, 'quizzes', quiz.id, 'attempts'),
-        attemptData
+      // Student এর total points update
+      const studentSnap = await getDocs(
+        query(collection(db, "students"), where("name", "==", studentName.trim()))
       );
 
-      if (!loggedInStudent) {
-        const studentSnap = await getDocs(
-          query(collection(db, "students"), where("name", "==", curName.trim()))
-        );
-        if (!studentSnap.empty) {
-          await updateDoc(doc(db, "students", studentSnap.docs[0].id), {
-            totalPoints:   increment(finalPoints),
-            quizzesPlayed: increment(1),
-          });
-          console.log(`[Points] ${curName} → +${finalPoints}`);
-        }
+      if (!studentSnap.empty) {
+        await updateDoc(doc(db, "students", studentSnap.docs[0].id), {
+          totalPoints:  increment(finalPoints),
+          quizzesPlayed: increment(1),
+        });
+        console.log(`[Points] ${studentName} → +${finalPoints} (base: ${basePoints}, bonus: ${bonusPoints})`);
       } else {
-        console.log('[Admin Impersonation] Points not saved');
+        console.warn('[Points] Student not found in DB:', studentName);
       }
+
+      setActiveQuiz((prev: any) => ({
+        ...prev,
+        attempts: [...(prev.attempts || []), attemptData]
+      }));
 
       setStage('RESULT');
     } catch (error) {
       console.error('[Submit Error]', error);
-      hasSubmitted.current = false;
+      hasSubmitted.current = false; // retry allow
       alert("রেজাল্ট সেভ করতে সমস্যা হয়েছে!");
     }
-  }, [loggedInStudent]);
+  };
+
+  // ── Quiz time helpers ────────────────────────────────────
+  const isCritical = stage === 'TAKING' && timeLeft <= 30;
+  const isLowTime  = stage === 'TAKING' && timeLeft <= 60 && !isCritical;
+  const totalTime  = activeQuiz ? Number(activeQuiz.config?.totalTime || 10) * 60 : 600;
+
+  // ── Render ─────────────────────────────────────────────────
+  // ✅ Firebase verify শেষ না হওয়া পর্যন্ত blank দেখাও
+  if (!authChecked) return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-slate-50 font-['Hind_Siliguri']">
@@ -235,17 +236,14 @@ const StudentPanel: React.FC<StudentPanelProps> = ({
           students={students}       onRegister={onRegister}
           onStudentLogin={handleProtectedLogin}
           isAlreadyAuth={isAuth}
-          loggedInStudent={loggedInStudent}
         />
       )}
 
       {stage === 'TAKING' && activeQuiz && (
         <QuizScreen
-          activeQuiz={activeQuiz}
-          timeLeft={timeLeft}
+          activeQuiz={activeQuiz} timeLeft={timeLeft}
           setTimeLeft={setTimeLeft}
-          answers={answers}
-          setAnswers={setAnswers}
+          answers={answers}       setAnswers={setAnswers}
           onSubmit={handleSubmit}
         />
       )}
@@ -257,14 +255,26 @@ const StudentPanel: React.FC<StudentPanelProps> = ({
           timeSpent={resData.timeSpent}
           studentName={studentName}
           onBack={handleGoToStudentHome}
-          leaderboard={leaderboard}         // ✅ subcollection থেকে real-time
+          leaderboard={activeQuiz.attempts}
           earnedPoints={resData.pointsEarned}
           wrongCount={resData.wrongCount}
           bonusPoints={resData.bonusPoints}
-          activeQuiz={activeQuiz}
-          submittedAnswers={answersRef.current}
         />
       )}
+      {/* ── Hello Kitty Assistant ── */}
+      <HelloKittyAssistant
+        page={stage === 'LOGIN' ? (isAuth ? 'dashboard' : 'home') : stage === 'TAKING' ? 'quiz' : 'result'}
+        timeLeft={timeLeft}
+        totalTime={totalTime}
+        answeredCount={Object.keys(answers).length}
+        totalCount={activeQuiz?.questions?.length || 1}
+        isCritical={isCritical}
+        isLowTime={isLowTime}
+        studentName={studentName}
+        quizTitle={activeQuiz?.title || ''}
+        score={stage === 'RESULT' ? resData.score : undefined}
+        totalMarks={stage === 'RESULT' ? resData.totalMarks : undefined}
+      />
     </div>
   );
 };
