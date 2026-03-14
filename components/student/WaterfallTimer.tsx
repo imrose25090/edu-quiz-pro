@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { memo } from "react";
 
 interface Props {
   timerRef: React.RefObject<HTMLDivElement>;
@@ -8,151 +8,125 @@ interface Props {
   onPointerMove: (e: React.PointerEvent) => void;
   onPointerUp: () => void;
   mins: number;
-  secs: string;
+  secs: string | number;
   isCritical: boolean;
   isLowTime: boolean;
   answeredCount: number;
   totalCount: number;
+  totalTime: number;
+  timeLeft: number;
 }
 
-const FONT: Record<string, number[][]> = {
-  "0": [[1,1,1],[1,0,1],[1,0,1],[1,0,1],[1,1,1]],
-  "1": [[0,1,0],[0,1,0],[0,1,0],[0,1,0],[0,1,0]],
-  "2": [[1,1,1],[0,0,1],[1,1,1],[1,0,0],[1,1,1]],
-  "3": [[1,1,1],[0,0,1],[1,1,1],[0,0,1],[1,1,1]],
-  "4": [[1,0,1],[1,0,1],[1,1,1],[0,0,1],[0,0,1]],
-  "5": [[1,1,1],[1,0,0],[1,1,1],[0,0,1],[1,1,1]],
-  "6": [[1,1,1],[1,0,0],[1,1,1],[1,0,1],[1,1,1]],
-  "7": [[1,1,1],[0,0,1],[0,1,0],[0,1,0],[0,1,0]],
-  "8": [[1,1,1],[1,0,1],[1,1,1],[1,0,1],[1,1,1]],
-  "9": [[1,1,1],[1,0,1],[1,1,1],[0,0,1],[1,1,1]],
-  ":": [[0,0,0],[0,1,0],[0,0,0],[0,1,0],[0,0,0]],
-};
+// ── Minimalist Compact Digit ─────────────────────────────
+const MiniDigit = memo(({ val, color }: { val: string; color: string }) => (
+  <div 
+    className="relative w-9 h-11 flex items-center justify-center rounded-lg overflow-hidden"
+    style={{ 
+      background: "rgba(30, 41, 59, 0.7)",
+      border: `1px solid ${color}22`,
+      boxShadow: `inset 0 0 8px ${color}11`
+    }}
+  >
+    <span 
+      key={val}
+      style={{ color, textShadow: `0 0 10px ${color}99` }}
+      className="text-2xl font-black tracking-tighter animate-[dropIn_0.4s_cubic-bezier(0.175,0.885,0.32,1.275)]"
+    >
+      {val}
+    </span>
+    <div className="absolute inset-x-0 top-0 h-[1px] bg-white/10" />
+  </div>
+));
 
 export const WaterfallTimer: React.FC<Props> = ({
   timerRef, pos, dragging,
   onPointerDown, onPointerMove, onPointerUp,
   mins, secs, isCritical, isLowTime,
   answeredCount, totalCount,
+  totalTime, timeLeft
 }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const color = isCritical ? "#ff4d4d" : isLowTime ? "#ffa500" : "#00f3ff";
-  const timeStr = `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    
-    let animationFrame: number;
-    const drops: { x: number; y: number; speed: number; length: number; opacity: number }[] = [];
-
-    const draw = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // ১. রেইন ড্রপ জেনারেট করা (আরও ঘন এবং স্মুথ) - সীমা যোগ করা হয়েছে
-      if (Math.random() > 0.1 && drops.length < 100) {
-        drops.push({
-          x: Math.random() * canvas.width,
-          y: -20,
-          speed: 4 + Math.random() * 5,
-          length: 10 + Math.random() * 15,
-          opacity: 0.1 + Math.random() * 0.4
-        });
-      }
-
-      // ২. ড্রপগুলো অ্যানিমেট করা - ব্যাকওয়ার্ড লুপ ব্যবহার করা হয়েছে
-      for (let i = drops.length - 1; i >= 0; i--) {
-        const d = drops[i];
-        d.y += d.speed;
-        
-        const grad = ctx.createLinearGradient(d.x, d.y - d.length, d.x, d.y);
-        grad.addColorStop(0, "transparent");
-        grad.addColorStop(1, color);
-
-        ctx.globalAlpha = d.opacity;
-        ctx.strokeStyle = grad;
-        ctx.lineWidth = 1.5;
-        ctx.lineCap = "round";
-        ctx.beginPath();
-        ctx.moveTo(d.x, d.y - d.length);
-        ctx.lineTo(d.x, d.y);
-        ctx.stroke();
-
-        if (d.y > canvas.height + 20) {
-          drops.splice(i, 1);
-        }
-      }
-
-      // ৩. ড্রপ যখন ডিজিটের ওপর পড়বে তখন সেটিকে ফুটিয়ে তোলা
-      ctx.globalAlpha = 1.0;
-      ctx.shadowBlur = 0; // Reset shadow from previous operations
-      let startX = 15;
-      const charW = 22;
-      const charH = 38;
-      const gap = 10;
-
-      timeStr.split("").forEach((char) => {
-        const matrix = FONT[char] || FONT["0"];
-        matrix.forEach((row, rIdx) => {
-          row.forEach((cell, cIdx) => {
-            if (cell === 1) {
-              const px = startX + cIdx * (charW / 3);
-              const py = 20 + rIdx * (charH / 5);
-
-              // ডিজিটের ওপর গ্লোয়িং ইফেক্ট
-              ctx.shadowBlur = 12;
-              ctx.shadowColor = color;
-              ctx.fillStyle = color;
-              ctx.beginPath();
-              ctx.arc(px, py, 2.5, 0, Math.PI * 2);
-              ctx.fill();
-              
-              // হালকা পানির ঝাপটা ইফেক্ট
-              if(Math.random() > 0.8) {
-                ctx.shadowBlur = 0;
-                ctx.fillStyle = "#fff";
-                ctx.fillRect(px, py, 1, 4);
-              }
-            }
-          });
-        });
-        startX += charW + gap;
-      });
-
-      animationFrame = requestAnimationFrame(draw);
-    };
-
-    draw();
-    return () => cancelAnimationFrame(animationFrame);
-  }, [timeStr, color]);
+  const m = String(mins).padStart(2, "0");
+  const s = String(secs).padStart(2, "0");
+  
+  const themeColor = isCritical ? "#ff4757" : isLowTime ? "#ffa502" : "#2ed573";
+  const progress = (timeLeft / totalTime) * 100;
 
   return (
-    <div
-      ref={timerRef}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      style={{
-        position: "fixed", left: pos.x, top: pos.y, 
-        zIndex: 1000000, cursor: dragging ? "grabbing" : "grab",
-        touchAction: "none", userSelect: "none",
-        pointerEvents: "auto",
-      }}
-    >
-      {/* কোনো ব্যাকগ্রাউন্ড নেই, শুধু ক্যানভাস */}
-      <canvas ref={canvasRef} width={200} height={100} style={{ display: "block" }} />
-      
-      {/* নিচে ছোট করে প্রগ্রেস টেক্সট */}
-      <div style={{
-        textAlign: "center", color: color, fontSize: "12px", 
-        fontFamily: "monospace", fontWeight: "bold",
-        textShadow: `0 0 5px ${color}`, marginTop: "-10px"
-      }}>
-        {answeredCount}/{totalCount}
+    <>
+      <style>{`
+        @keyframes dropIn {
+          0% { transform: translateY(-20px); opacity: 0; }
+          100% { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes subtleGlow {
+          0%, 100% { box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px ${themeColor}22; }
+          50% { box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 15px ${themeColor}33; }
+        }
+      `}</style>
+
+      <div
+        ref={timerRef}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        style={{
+          left: pos.x, top: pos.y,
+          position: "fixed", zIndex: 9999,
+          touchAction: "none", userSelect: "none",
+          background: "rgba(15, 23, 42, 0.9)",
+          backdropFilter: "blur(16px)",
+          borderRadius: "20px",
+          padding: "10px 12px",
+          display: "flex", flexDirection: "column", gap: "8px",
+          cursor: dragging ? "grabbing" : "grab",
+          animation: "subtleGlow 2s infinite",
+          width: "155px", // আরও ছোট করা হয়েছে
+          border: `1px solid ${themeColor}33`
+        }}
+      >
+        {/* Top Info */}
+        <div className="flex justify-between items-center px-0.5">
+          <span className="text-[9px] font-bold tracking-widest text-white/50 uppercase">
+            {isCritical ? "Hurry!" : "Time"}
+          </span>
+          <span className="text-[9px] font-bold px-1.5 py-0.5 bg-white/5 rounded-md text-white/80">
+            {answeredCount}/{totalCount}
+          </span>
+        </div>
+
+        {/* Watch Section */}
+        <div className="flex items-center justify-center gap-1.5">
+          <div className="flex gap-0.5">
+            <MiniDigit val={m[0]} color={themeColor} />
+            <MiniDigit val={m[1]} color={themeColor} />
+          </div>
+          
+          <div className="flex flex-col gap-1 opacity-50">
+            <div style={{ background: themeColor }} className="w-1 h-1 rounded-full" />
+            <div style={{ background: themeColor }} className="w-1 h-1 rounded-full" />
+          </div>
+
+          <div className="flex gap-0.5">
+            <MiniDigit val={s[0]} color={themeColor} />
+            <MiniDigit val={s[1]} color={themeColor} />
+          </div>
+        </div>
+
+        {/* Slim Progress Bar */}
+        <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+          <div 
+            style={{ 
+              width: `${progress}%`,
+              background: themeColor,
+              boxShadow: `0 0 8px ${themeColor}aa`,
+              transition: "width 1s linear"
+            }}
+            className="h-full rounded-full"
+          />
+        </div>
       </div>
-    </div>
+    </>
   );
 };
+
+export default WaterfallTimer;
