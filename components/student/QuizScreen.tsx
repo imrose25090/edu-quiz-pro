@@ -1,9 +1,10 @@
-import { WaterfallTimer } from "./WaterfallTimer";
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { WaterfallTimer } from './WaterfallTimer';
 
 interface QuizScreenProps {
   activeQuiz: any;
   timeLeft: number;
+  totalTime?: number;
   setTimeLeft: React.Dispatch<React.SetStateAction<number>>;
   answers: Record<string, string>;
   setAnswers: React.Dispatch<React.SetStateAction<Record<string, string>>>;
@@ -13,6 +14,7 @@ interface QuizScreenProps {
 export const QuizScreen: React.FC<QuizScreenProps> = ({
   activeQuiz,
   timeLeft,
+  totalTime = 600,
   setTimeLeft,
   answers,
   setAnswers,
@@ -30,20 +32,10 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({
     onSubmit();
   }, [isSubmitting, onSubmit]);
 
-  /* ─── Timer ────────────────────────────────────────────── */
+  /* ─── Timer — StudentPanel এ চলে, এখানে শুধু timeLeft=0 check ── */
   useEffect(() => {
-    if (hasSubmitted.current) return;
-    if (timeLeft <= 0) { safeSubmit(true); return; }
-
-    const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 1) { clearInterval(timer); safeSubmit(true); return 0; }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (timeLeft <= 0 && !hasSubmitted.current) safeSubmit(true);
+  }, [timeLeft]);
 
   /* ─── Draggable floating timer ─────────────────────────── */
   const [pos, setPos]           = useState({ x: 16, y: 80 });
@@ -115,13 +107,22 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({
   return (
     <div className="max-w-4xl mx-auto px-4 md:px-0 space-y-8 font-['Hind_Siliguri'] pb-20 animate-in fade-in duration-500">
 
-      {/* ══ WATERFALL TIMER ══════════════════════════════════ */}
+      {/* ══ PREMIUM WATERFALL TIMER ══════════════════════════ */}
       <WaterfallTimer
-        timerRef={timerRef} pos={pos} dragging={dragging}
-        onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp}
-        mins={mins} secs={secs}
-        isCritical={isCritical} isLowTime={isLowTime}
-        answeredCount={answeredCount} totalCount={totalCount}
+        timerRef={timerRef}
+        pos={pos}
+        dragging={dragging}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        mins={mins}
+        secs={secs}
+        isCritical={isCritical}
+        isLowTime={isLowTime}
+        answeredCount={answeredCount}
+        totalCount={totalCount}
+        totalTime={totalTime}
+        timeLeft={timeLeft}
       />
 
       {/* ══ STICKY HEADER ═════════════════════════════════════ */}
