@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { db } from '../firebase';
 import { collection, query, where, getDocs, updateDoc, arrayUnion, doc, increment } from "firebase/firestore";
 
@@ -17,29 +17,20 @@ interface StudentPanelProps {
 const StudentPanel: React.FC<StudentPanelProps> = ({
   onBack, students, onRegister, onStudentLogin
 }) => {
-  // ✅ FIX: localStorage blindly trust না করে false দিয়ে শুরু করো
   const [isAuth,      setIsAuth]      = useState(false);
   const [studentName, setStudentName] = useState('');
-  const [authChecked, setAuthChecked] = useState(false); // verify শেষ না হওয়া পর্যন্ত loading
+  const [authChecked, setAuthChecked] = useState(false);
 
-  // ✅ Mount এ Firebase verify করো
   useEffect(() => {
     const cachedAuth = localStorage.getItem('student_auth') === 'true';
     const cachedName = (localStorage.getItem('student_name') || '').trim();
-
-    if (!cachedAuth || !cachedName) {
-      setAuthChecked(true);
-      return;
-    }
-
+    if (!cachedAuth || !cachedName) { setAuthChecked(true); return; }
     getDocs(query(collection(db, 'students'), where('name', '==', cachedName)))
       .then(snap => {
         const student = snap.docs[0]?.data();
         if (!snap.empty && student && !student.isFrozen) {
-          setIsAuth(true);
-          setStudentName(cachedName);
+          setIsAuth(true); setStudentName(cachedName);
         } else {
-          // Account নেই বা frozen — cache clear করো
           localStorage.removeItem('student_auth');
           localStorage.removeItem('student_name');
         }
@@ -57,8 +48,6 @@ const StudentPanel: React.FC<StudentPanelProps> = ({
   const [activeQuiz, setActiveQuiz] = useState<any>(null);
   const [answers,    setAnswers]    = useState<Record<string, string>>({});
   const [timeLeft,   setTimeLeft]   = useState(0);
-
-  // submit lock — একবারের বেশি submit হবে না
   const hasSubmitted = useRef(false);
 
   const [resData, setResData] = useState({
@@ -76,8 +65,7 @@ const StudentPanel: React.FC<StudentPanelProps> = ({
       }
       const success = onStudentLogin(name, pass);
       if (success) {
-        setIsAuth(true);
-        setStudentName(name);
+        setIsAuth(true); setStudentName(name);
         localStorage.setItem('student_auth', 'true');
         localStorage.setItem('student_name', name);
       }
@@ -93,10 +81,8 @@ const StudentPanel: React.FC<StudentPanelProps> = ({
   };
 
   const handleGoToStudentHome = () => {
-    setStage('LOGIN');
-    setQuizCode('');
-    setAnswers({});
-    setActiveQuiz(null);
+    setStage('LOGIN'); setQuizCode('');
+    setAnswers({}); setActiveQuiz(null);
     hasSubmitted.current = false;
   };
 
@@ -117,34 +103,30 @@ const StudentPanel: React.FC<StudentPanelProps> = ({
     } catch { alert("সার্ভার সমস্যা!"); }
   };
 
-  // ── Timer — শুধু TAKING stage এ চলবে, timeLeft > 0 হলে ─
-  useEffect(() => {
-    if (stage !== 'TAKING') return;
+  // ── Submit — useCallback so timer can always call latest version ──
+  const activeQuizRef  = useRef<any>(null);
+  const answersRef     = useRef<Record<string, string>>({});
+  const studentNameRef = useRef('');
+  const timeLeftRef    = useRef(0);
 
-    const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          handleSubmit();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+  // Keep refs in sync with state
+  useEffect(() => { activeQuizRef.current  = activeQuiz;   }, [activeQuiz]);
+  useEffect(() => { answersRef.current     = answers;      }, [answers]);
+  useEffect(() => { studentNameRef.current = studentName;  }, [studentName]);
+  useEffect(() => { timeLeftRef.current    = timeLeft;     }, [timeLeft]);
 
-    return () => clearInterval(timer);
-  }, [stage]); // ← শুধু stage change এ re-run, timeLeft এ না
+  const handleSubmit = useCallback(async () => {
+    const quiz    = activeQuizRef.current;
+    const ans     = answersRef.current;
+    const name    = studentNameRef.current;
+    const tLeft   = timeLeftRef.current;
 
-  // ── Submit ────────────────────────────────────────────────
-  const handleSubmit = async () => {
-    if (!activeQuiz || hasSubmitted.current) return;
+    if (!quiz || hasSubmitted.current) return;
     hasSubmitted.current = true;
 
-    let correctCount = 0;
-    let wrongCount   = 0;
-
-    activeQuiz.questions.forEach((q: any) => {
-      const userAns    = String(answers[q.id] || "").trim().toLowerCase();
+    let correctCount = 0, wrongCount = 0;
+    quiz.questions.forEach((q: any) => {
+      const userAns    = String(ans[q.id] || "").trim().toLowerCase();
       const correctAns = String(q.answer || q.correctAnswer || "").trim().toLowerCase();
       if (userAns !== "") {
         if (userAns === correctAns) correctCount++;
@@ -152,25 +134,20 @@ const StudentPanel: React.FC<StudentPanelProps> = ({
       }
     });
 
-    // Points: correct=1, wrong=-0.5, min 0
     const basePoints  = Math.max(0, correctCount - wrongCount * 0.5);
-    // Bonus: প্রতি পূর্ণ মিনিট বাকি থাকলে 1 point
-    const bonusPoints = Math.floor(timeLeft / 60);
+    const bonusPoints = Math.floor(tLeft / 60);
     const finalPoints = basePoints + bonusPoints;
-
-    const totalPossibleMarks = activeQuiz.questions.length;
-    const timeSpent = Math.max(1, (Number(activeQuiz.config?.totalTime || 10) * 60) - timeLeft);
+    const totalPossibleMarks = quiz.questions.length;
+    const timeSpent = Math.max(1, (Number(quiz.config?.totalTime || 10) * 60) - tLeft);
 
     const attemptData = {
-      studentName:  studentName.trim(),
+      studentName:  name.trim(),
       score:        correctCount,
       totalMarks:   totalPossibleMarks,
       submittedAt:  new Date().toISOString(),
-      timeSpent,
-      answers:      { ...answers },
+      timeSpent,    answers: { ...ans },
       earnedPoints: finalPoints,
-      wrongAnswers: wrongCount,
-      bonusPoints,
+      wrongAnswers: wrongCount, bonusPoints,
     };
 
     setResData({
@@ -180,46 +157,49 @@ const StudentPanel: React.FC<StudentPanelProps> = ({
     });
 
     try {
-      // Quiz এ attempt save
-      await updateDoc(doc(db, "quizzes", activeQuiz.id), {
-        attempts: arrayUnion(attemptData)
-      });
-
-      // Student এর total points update
+      await updateDoc(doc(db, "quizzes", quiz.id), { attempts: arrayUnion(attemptData) });
       const studentSnap = await getDocs(
-        query(collection(db, "students"), where("name", "==", studentName.trim()))
+        query(collection(db, "students"), where("name", "==", name.trim()))
       );
-
       if (!studentSnap.empty) {
         await updateDoc(doc(db, "students", studentSnap.docs[0].id), {
-          totalPoints:  increment(finalPoints),
-          quizzesPlayed: increment(1),
+          totalPoints: increment(finalPoints), quizzesPlayed: increment(1),
         });
-        console.log(`[Points] ${studentName} → +${finalPoints} (base: ${basePoints}, bonus: ${bonusPoints})`);
-      } else {
-        console.warn('[Points] Student not found in DB:', studentName);
       }
-
       setActiveQuiz((prev: any) => ({
-        ...prev,
-        attempts: [...(prev.attempts || []), attemptData]
+        ...prev, attempts: [...(prev.attempts || []), attemptData]
       }));
-
       setStage('RESULT');
     } catch (error) {
       console.error('[Submit Error]', error);
-      hasSubmitted.current = false; // retry allow
+      hasSubmitted.current = false;
       alert("রেজাল্ট সেভ করতে সমস্যা হয়েছে!");
     }
-  };
+  }, []); // ✅ empty deps — refs থেকে latest value পড়ে, stale closure নেই
 
-  // ── Quiz time helpers ────────────────────────────────────
+  // ── Timer — setInterval একবারই চলে, ref দিয়ে timeLeft track করে ──
+  useEffect(() => {
+    if (stage !== 'TAKING') return;
+
+    // ✅ FIX: সরাসরি ref থেকে countdown করো — state update এর delay নেই
+    const timer = setInterval(() => {
+      timeLeftRef.current -= 1;
+      setTimeLeft(timeLeftRef.current);   // UI update
+
+      if (timeLeftRef.current <= 0) {
+        clearInterval(timer);
+        handleSubmit();
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [stage, handleSubmit]); // ✅ handleSubmit stable (useCallback + empty deps)
+
+  // ── Quiz time helpers ─────────────────────────────────────
   const isCritical = stage === 'TAKING' && timeLeft <= 30;
   const isLowTime  = stage === 'TAKING' && timeLeft <= 60 && !isCritical;
   const totalTime  = activeQuiz ? Number(activeQuiz.config?.totalTime || 10) * 60 : 600;
 
-  // ── Render ─────────────────────────────────────────────────
-  // ✅ Firebase verify শেষ না হওয়া পর্যন্ত blank দেখাও
   if (!authChecked) return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center">
       <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
@@ -238,40 +218,31 @@ const StudentPanel: React.FC<StudentPanelProps> = ({
           isAlreadyAuth={isAuth}
         />
       )}
-
       {stage === 'TAKING' && activeQuiz && (
         <QuizScreen
           activeQuiz={activeQuiz} timeLeft={timeLeft}
           setTimeLeft={setTimeLeft}
           answers={answers}       setAnswers={setAnswers}
           onSubmit={handleSubmit}
+          totalTime={totalTime}
         />
       )}
-
       {stage === 'RESULT' && activeQuiz && (
         <QuizResult
-          score={resData.score}
-          totalMarks={resData.totalMarks}
-          timeSpent={resData.timeSpent}
-          studentName={studentName}
-          onBack={handleGoToStudentHome}
-          leaderboard={activeQuiz.attempts}
-          earnedPoints={resData.pointsEarned}
-          wrongCount={resData.wrongCount}
+          score={resData.score}         totalMarks={resData.totalMarks}
+          timeSpent={resData.timeSpent} studentName={studentName}
+          onBack={handleGoToStudentHome} leaderboard={activeQuiz.attempts}
+          earnedPoints={resData.pointsEarned} wrongCount={resData.wrongCount}
           bonusPoints={resData.bonusPoints}
         />
       )}
-      {/* ── Hello Kitty Assistant ── */}
       <HelloKittyAssistant
         page={stage === 'LOGIN' ? (isAuth ? 'dashboard' : 'home') : stage === 'TAKING' ? 'quiz' : 'result'}
-        timeLeft={timeLeft}
-        totalTime={totalTime}
+        timeLeft={timeLeft}       totalTime={totalTime}
         answeredCount={Object.keys(answers).length}
         totalCount={activeQuiz?.questions?.length || 1}
-        isCritical={isCritical}
-        isLowTime={isLowTime}
-        studentName={studentName}
-        quizTitle={activeQuiz?.title || ''}
+        isCritical={isCritical}   isLowTime={isLowTime}
+        studentName={studentName} quizTitle={activeQuiz?.title || ''}
         score={stage === 'RESULT' ? resData.score : undefined}
         totalMarks={stage === 'RESULT' ? resData.totalMarks : undefined}
       />
