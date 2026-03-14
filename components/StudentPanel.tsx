@@ -146,11 +146,17 @@ const StudentPanel: React.FC<StudentPanelProps> = ({
       }
     });
 
-    const basePoints  = Math.max(0, correctCount - wrongCount * 0.5);
-    const bonusPoints = Math.floor(tLeft / 60);
-    const finalPoints = basePoints + bonusPoints;
     const totalPossibleMarks = quiz.questions.length;
     const timeSpent = Math.max(1, (Number(quiz.config?.totalTime || 10) * 60) - tLeft);
+
+    // ✅ Scoring rules:
+    // • প্রতি correct = +1 point
+    // • প্রতি wrong   = -0.5 point  (min 0)
+    // • 90%+ mark পেলে → প্রতি বাকি মিনিটে +1 bonus point
+    const basePoints  = Math.max(0, correctCount * 1 - wrongCount * 0.5);
+    const percentage  = totalPossibleMarks > 0 ? (correctCount / totalPossibleMarks) * 100 : 0;
+    const bonusPoints = percentage >= 90 ? Math.floor(tLeft / 60) : 0;
+    const finalPoints = basePoints + bonusPoints;
 
     const attemptData = {
       studentName:  name.trim(),
