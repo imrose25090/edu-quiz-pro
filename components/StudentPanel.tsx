@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { db } from '../firebase';
-import { collection, query, where, getDocs, updateDoc, arrayUnion, doc, increment } from "firebase/firestore";
+import { collection, query, where, getDocs, updateDoc, arrayUnion, addDoc, doc, increment, serverTimestamp } from "firebase/firestore";
 
 import { StudentLogin } from './student/StudentLogin';
 import { HelloKittyAssistant } from './HelloKittyAssistant';
@@ -96,6 +96,18 @@ const StudentPanel: React.FC<StudentPanelProps> = ({
       if (snap.empty) return alert("ভুল কোড!");
       const docSnap = snap.docs[0];
       const data = docSnap.data();
+
+      // ✅ subcollection থেকে check — এই student আগে দিয়েছে কিনা
+      const attSnap = await getDocs(collection(db, "quizzes", docSnap.id, "attempts"));
+      const myName = studentName.trim().toLowerCase();
+      const alreadyPlayed = attSnap.docs.some(
+        d => (d.data().studentName || "").trim().toLowerCase() === myName
+      );
+      if (alreadyPlayed) {
+        alert("তুমি এই কুইজটি আগেই দিয়েছ! একই কুইজ দুইবার দেওয়া যাবে না।");
+        return;
+      }
+
       hasSubmitted.current = false;
       setActiveQuiz({ id: docSnap.id, ...data });
       setTimeLeft(Number(data.config?.totalTime || 10) * 60);
@@ -157,6 +169,12 @@ const StudentPanel: React.FC<StudentPanelProps> = ({
     });
 
     try {
+      // ✅ subcollection এ save করো — StudentLogin history এর সাথে match করে
+      await addDoc(collection(db, "quizzes", quiz.id, "attempts"), {
+        ...attemptData,
+        createdAt: serverTimestamp(),
+      });
+      // ✅ main doc এ attempts array ও রাখো (leaderboard এর জন্য)
       await updateDoc(doc(db, "quizzes", quiz.id), { attempts: arrayUnion(attemptData) });
       const studentSnap = await getDocs(
         query(collection(db, "students"), where("name", "==", name.trim()))
