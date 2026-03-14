@@ -211,26 +211,38 @@ const MasterRegistry: React.FC<MasterRegistryProps> = ({
     return result;
   }, [liveQuizzes]);
 
-  // ── Auto-clean duplicates from a quiz (subcollection version) ─
+  // ── Auto-clean duplicates — directly subcollection থেকে পড়ো ─
   const cleanDuplicates = async (quizId: string) => {
-    const quiz = liveQuizzes.find(q => q.id === quizId);
-    if (!quiz) return;
-    const attempts: any[] = [...(quiz.attempts || [])];
-    const seen: Record<string, string> = {}; // name → keep id
-    for (const att of attempts) {
-      const n = att.studentName || 'Unknown';
+    // ✅ FIX: liveQuizzes.attempts array এ Firestore doc ID নেই
+    //         তাই সরাসরি subcollection fetch করো
+    const attSnap = await getDocs(collection(db, 'quizzes', quizId, 'attempts'));
+    const docs = attSnap.docs; // প্রতিটায় real .id আছে
+
+    const seen: Record<string, string> = {}; // studentName → first doc id
+    for (const d of docs) {
+      const n = (d.data().studentName || 'Unknown').trim().toLowerCase();
       if (seen[n]) {
-        // duplicate — delete থেকে subcollection
-        await deleteDoc(doc(db, 'quizzes', quizId, 'attempts', att.id));
+        // duplicate — এই doc টা delete করো
+        await deleteDoc(doc(db, 'quizzes', quizId, 'attempts', d.id));
+        // main doc এর array থেকেও সরাও
+        const quiz = liveQuizzes.find(q => q.id === quizId);
+        if (quiz) {
+          const filtered = (quiz.attempts || []).filter(
+            (a: any) => a.submittedAt !== d.data().submittedAt
+          );
+          await updateDoc(doc(db, 'quizzes', quizId), { attempts: filtered });
+        }
       } else {
-        seen[n] = att.id;
+        seen[n] = d.id;
       }
     }
   };
 
   const cleanAllDuplicates = async () => {
+    if (!window.confirm(`${duplicateInfo.length} জন student এর duplicate attempt delete করবেন?`)) return;
     const quizIds = [...new Set(duplicateInfo.map(d => d.quizId))];
     for (const id of quizIds) await cleanDuplicates(id);
+    alert('✅ সব duplicate সরানো হয়েছে!');
   };
 
   const [showDuplicates, setShowDuplicates] = useState(false);
