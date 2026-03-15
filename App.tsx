@@ -6,7 +6,6 @@ import AdminPanel from "./components/admin/AdminPanel";
 import TeacherPanel from "./components/TeacherPanel"; 
 import StudentPanel from "./components/StudentPanel"; 
 import { ChatPanel } from "./components/ChatPanel";  // ✅ নতুন
-import { HelloKittyAssistant } from "./components/HelloKittyAssistant";
 import { UserRole } from "./types";
 
 import { db } from "./firebase"; 
@@ -245,10 +244,6 @@ const MainContent: React.FC = () => {
         />
       )}
 
-      {/* 🎀 Hello Kitty Assistant — শুধু student panel এ */}
-      {(currentRole === UserRole.STUDENT || loggedInStudent || (impersonatedUser?.role === 'student')) && (
-        <HelloKittyAssistant page="dashboard" />
-      )}
 
     </div>
   );
