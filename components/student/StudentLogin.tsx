@@ -1,7 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../../firebase';
 import { collection, onSnapshot, query, getDocs } from 'firebase/firestore';
 import { StudentTranscriptModal } from '../teacher/StudentTranscriptModal';
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  Tooltip, 
+  ResponsiveContainer, 
+  LineChart, 
+  Line, 
+  CartesianGrid,
+  AreaChart,
+  Area,
+  Cell
+} from 'recharts';
 
 // ═══════════════════════════════════════════════════
 // INLINE GAME COMPONENTS (unchanged)
@@ -252,8 +266,8 @@ interface StudentLoginProps {
   onStart: () => void;
   onBack: () => void;
   students: any[];
-  onRegister?: (name: string, pass: string) => void;      // optional — admin impersonation এ নেই
-  onStudentLogin?: (name: string, pass: string) => boolean | Promise<boolean>; // optional — admin impersonation এ নেই
+  onRegister?: (name: string, pass: string) => void;
+  onStudentLogin?: (name: string, pass: string) => boolean | Promise<boolean>;
   isAlreadyAuth?: boolean;
 }
 
@@ -283,6 +297,209 @@ const getMedal = (pts: number) => {
 const rankIcon = (r: number) => r === 1 ? '🥇' : r === 2 ? '🥈' : r === 3 ? '🥉' : `#${r}`;
 
 // ═══════════════════════════════════════════════════
+// PROGRESS CHART COMPONENT
+// ═══════════════════════════════════════════════════
+
+interface QuizHistoryItem {
+  quizTitle: string;
+  quizCode: string;
+  score: number;
+  totalMarks: number;
+  pts: number;
+  date: string;
+  fullQuizData: any;
+  myAttemptData: any;
+}
+
+const ProgressCharts: React.FC<{ history: QuizHistoryItem[] }> = ({ history }) => {
+  const chartData = useMemo(() => {
+    // Sort by date ascending for chart
+    const sorted = [...history].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    return sorted.map((item, index) => ({
+      name: `কুইজ ${index + 1}`,
+      fullTitle: item.quizTitle,
+      score: item.score,
+      total: item.totalMarks,
+      percentage: Math.round((item.score / (item.totalMarks || 1)) * 100),
+      points: item.pts,
+      date: new Date(item.date).toLocaleDateString('bn-BD', { day: 'numeric', month: 'short' }),
+    }));
+  }, [history]);
+
+  const cumulativeData = useMemo(() => {
+    const sorted = [...history].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    let cumulativePoints = 0;
+    return sorted.map((item, index) => {
+      cumulativePoints += item.pts;
+      return {
+        name: `কুইজ ${index + 1}`,
+        points: item.pts,
+        cumulativePoints,
+        date: new Date(item.date).toLocaleDateString('bn-BD', { day: 'numeric', month: 'short' }),
+      };
+    });
+  }, [history]);
+
+  if (history.length === 0) return null;
+
+  return (
+    <div className="space-y-6 mb-6">
+      {/* Score Progress Chart */}
+      <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <p className="text-sm font-black text-slate-800">📊 স্কোর প্রোগ্রেস</p>
+            <p className="text-xs font-bold text-slate-400 mt-0.5">প্রতিটি কুইজের পারফরম্যান্স</p>
+          </div>
+          <div className="flex gap-2">
+            <span className="text-[10px] font-black bg-emerald-100 text-emerald-600 px-2 py-1 rounded-full">
+              সর্বোচ্চ: {Math.max(...chartData.map(d => d.percentage))}%
+            </span>
+          </div>
+        </div>
+        <div className="h-48 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+              <XAxis 
+                dataKey="date" 
+                tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 700 }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis 
+                tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 700 }}
+                axisLine={false}
+                tickLine={false}
+                domain={[0, 100]}
+              />
+              <Tooltip 
+                content={({ active, payload }) => {
+                  if (active && payload && payload.length) {
+                    const data = payload[0].payload;
+                    return (
+                      <div className="bg-slate-800 text-white p-3 rounded-xl text-xs font-bold shadow-xl">
+                        <p className="text-slate-300 mb-1">{data.fullTitle}</p>
+                        <p className="text-lg font-black">{data.percentage}%</p>
+                        <p className="text-emerald-400">স্কোর: {data.score}/{data.total}</p>
+                        <p className="text-amber-400">পয়েন্ট: +{data.points}</p>
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
+              <Bar dataKey="percentage" radius={[6, 6, 0, 0]} maxBarSize={40}>
+                {chartData.map((entry, index) => (
+                  <Cell 
+                    key={`cell-${index}`} 
+                    fill={entry.percentage >= 80 ? '#10b981' : entry.percentage >= 60 ? '#f59e0b' : '#ef4444'} 
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="flex justify-center gap-4 mt-3">
+          <div className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+            <span className="text-[10px] font-bold text-slate-500">৮০%+ উত্তীর্ণ</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+            <span className="text-[10px] font-bold text-slate-500">৬০-৭৯% মাঝারি</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+            <span className="text-[10px] font-bold text-slate-500">৬০% এর নিচে</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Points Trend Chart */}
+      <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <p className="text-sm font-black text-slate-800">📈 পয়েন্ট ট্রেন্ড</p>
+            <p className="text-xs font-bold text-slate-400 mt-0.5">মোট পয়েন্ট সংগ্রহের গতি</p>
+          </div>
+          <div className="flex gap-2">
+            <span className="text-[10px] font-black bg-indigo-100 text-indigo-600 px-2 py-1 rounded-full">
+              মোট: {cumulativeData[cumulativeData.length - 1]?.cumulativePoints.toFixed(0) || 0} pts
+            </span>
+          </div>
+        </div>
+        <div className="h-40 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={cumulativeData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <defs>
+                <linearGradient id="colorPoints" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+              <XAxis 
+                dataKey="date" 
+                tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 700 }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis 
+                tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 700 }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip 
+                content={({ active, payload }) => {
+                  if (active && payload && payload.length) {
+                    const data = payload[0].payload;
+                    return (
+                      <div className="bg-slate-800 text-white p-3 rounded-xl text-xs font-bold shadow-xl">
+                        <p className="text-slate-300 mb-1">{data.date}</p>
+                        <p className="text-emerald-400">এই কুইজে: +{data.points} pts</p>
+                        <p className="text-indigo-400 font-black text-lg">মোট: {data.cumulativePoints.toFixed(0)} pts</p>
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="cumulativePoints" 
+                stroke="#6366f1" 
+                strokeWidth={3}
+                fillOpacity={1} 
+                fill="url(#colorPoints)" 
+              />
+              <Line 
+                type="monotone" 
+                dataKey="points" 
+                stroke="#f59e0b" 
+                strokeWidth={2} 
+                dot={{ fill: '#f59e0b', r: 3 }}
+                activeDot={{ r: 5, fill: '#f59e0b' }}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="flex justify-center gap-4 mt-3">
+          <div className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
+            <span className="text-[10px] font-bold text-slate-500">মোট পয়েন্ট</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+            <span className="text-[10px] font-bold text-slate-500">প্রতি কুইজে পয়েন্ট</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════════════
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════
 
@@ -296,15 +513,11 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({
   const [isNewUser,  setIsNewUser]  = useState(false);
   const [password,   setPassword]   = useState('');
 
-  // ✅ FIX: isAdminView শুধু admin impersonation এ true (onStudentLogin নেই)
   const isAdminView = !onStudentLogin;
-
-  // ✅ FIX: isAlreadyAuth state নেই — StudentPanel এর isAlreadyAuth prop ই সত্য
-  // Login হলে StudentPanel setIsAuth(true) করবে → isAlreadyAuth=true আসবে → re-render হবে
 
   const [totalPoints, setTotalPoints] = useState(0);
   const [globalRank,  setGlobalRank]  = useState(0);
-  const [history,     setHistory]     = useState<any[]>([]);
+  const [history,     setHistory]     = useState<QuizHistoryItem[]>([]);
   const [showGameModal, setShowGameModal] = useState(false);
   const [activeGame,    setActiveGame]    = useState<string | null>(null);
   const [allStudents, setAllStudents] = useState<{ name: string; pts: number }[]>([]);
@@ -323,7 +536,6 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({
     const pass = password.trim();
 
     if (isNewUser) {
-      // ✅ FIX 2: onRegister optional check
       if (!onRegister) return;
       if (localStorage.getItem('eduquiz_student_registered')) {
         alert('এই ডিভাইসে অলরেডি অ্যাকাউন্ট আছে।');
@@ -340,23 +552,20 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({
       alert('অ্যাকাউন্ট তৈরি হয়েছে! লগইন করুন।');
       setIsNewUser(false); setPassword('');
     } else {
-      // ✅ FIX 2: onStudentLogin optional check
       if (!onStudentLogin) return;
       const ok = await onStudentLogin(name, pass);
       if (!ok) {
         alert('ভুল নাম অথবা পাসওয়ার্ড!');
       }
-      // ✅ success হলে StudentPanel isAuth set করবে → isAlreadyAuth=true prop আসবে → re-render
     }
   };
 
   // ── Live data ─────────────────────────────────────────────
   useEffect(() => {
     if (!isAlreadyAuth || !studentName) return;
-    // ✅ subcollection থেকে attempts load করো
     const unsub = onSnapshot(query(collection(db, 'quizzes')), async (snap) => {
       const ptsMap: Record<string, number> = {};
-      const myHist: any[] = [];
+      const myHist: QuizHistoryItem[] = [];
 
       await Promise.all(snap.docs.map(async (d) => {
         const quiz = { id: d.id, ...d.data() } as any;
@@ -425,7 +634,6 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({
 
         <div className="flex items-center gap-3 my-5">
           <div className="flex-1 h-px bg-slate-200" />
-          {/* ✅ FIX 3: onRegister না থাকলে register option দেখাবে না (impersonation) */}
           {onRegister && (
             <button onClick={() => setIsNewUser(!isNewUser)}
               className="text-slate-400 hover:text-indigo-500 font-bold text-sm transition-colors">
@@ -456,7 +664,6 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({
             <span className="text-white font-black text-sm">{studentName[0]?.toUpperCase()}</span>
           </div>
           <p className="text-slate-800 font-black text-lg leading-none">{studentName}</p>
-          {/* ✅ admin impersonation badge — শুধু real admin impersonation এ */}
           {isAdminView && (
             <span className="text-[9px] font-black bg-rose-100 text-rose-500 px-2 py-0.5 rounded-full uppercase">Admin View</span>
           )}
@@ -644,7 +851,7 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({
           )}
         </div>
 
-        {/* History */}
+        {/* History with Charts */}
         <div className="bg-white border border-slate-100 rounded-[24px] shadow-sm overflow-hidden">
           <button onClick={() => setShowHistory(!showHistory)} className="w-full flex justify-between items-center px-5 py-4">
             <div className="flex items-center gap-2">
@@ -655,27 +862,59 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
             </svg>
           </button>
+          
           {showHistory && (
-            <div className="px-4 pb-4 space-y-2 max-h-80 overflow-y-auto">
-              {history.length === 0 && <p className="text-center text-slate-300 font-bold text-base py-6">এখনো কোনো কুইজ দেওয়া হয়নি</p>}
-              {history.map((item, idx) => {
-                const pct = Math.round((item.score / (item.totalMarks || 1)) * 100);
-                return (
-                  <div key={idx}
-                    onClick={() => { setViewingQuiz(item.fullQuizData); setViewingAttempt(item.myAttemptData); }}
-                    className="flex items-center gap-3 p-4 bg-slate-50 border border-slate-100 rounded-2xl hover:border-indigo-200 hover:bg-indigo-50/40 transition-all cursor-pointer">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 font-black text-sm ${pct >= 70 ? 'bg-emerald-50 text-emerald-600' : pct >= 40 ? 'bg-amber-50 text-amber-500' : 'bg-rose-50 text-rose-500'}`}>{pct}%</div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-black text-base text-slate-700 truncate">{item.quizTitle}</p>
-                      <p className="text-xs font-bold text-slate-400 mt-0.5">{item.quizCode} · {new Date(item.date).toLocaleDateString('bn-BD')}</p>
+            <div className="px-4 pb-4">
+              {/* Progress Charts */}
+              {history.length > 0 && <ProgressCharts history={history} />}
+              
+              {/* History List */}
+              <div className="space-y-2 max-h-80 overflow-y-auto">
+                {history.length === 0 && <p className="text-center text-slate-300 font-bold text-base py-6">এখনো কোনো কুইজ দেওয়া হয়নি</p>}
+                {history.map((item, idx) => {
+                  const pct = Math.round((item.score / (item.totalMarks || 1)) * 100);
+                  const isExcellent = pct >= 80;
+                  const isGood = pct >= 60;
+                  
+                  return (
+                    <div key={idx}
+                      onClick={() => { setViewingQuiz(item.fullQuizData); setViewingAttempt(item.myAttemptData); }}
+                      className="flex items-center gap-3 p-4 bg-slate-50 border border-slate-100 rounded-2xl hover:border-indigo-200 hover:bg-indigo-50/40 transition-all cursor-pointer group">
+                      
+                      {/* Percentage Badge */}
+                      <div className={`w-14 h-14 rounded-2xl flex flex-col items-center justify-center shrink-0 font-black ${
+                        isExcellent ? 'bg-emerald-100 text-emerald-600 border-2 border-emerald-200' : 
+                        isGood ? 'bg-amber-100 text-amber-600 border-2 border-amber-200' : 
+                        'bg-rose-100 text-rose-600 border-2 border-rose-200'
+                      }`}>
+                        <span className="text-lg leading-none">{pct}%</span>
+                        <span className="text-[9px] font-bold opacity-70 mt-0.5">{isExcellent ? 'A+' : isGood ? 'B' : 'C'}</span>
+                      </div>
+                      
+                      {/* Quiz Info */}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-black text-base text-slate-700 truncate group-hover:text-indigo-700 transition-colors">{item.quizTitle}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[10px] font-bold bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full">{item.quizCode}</span>
+                          <span className="text-xs font-bold text-slate-400">•</span>
+                          <span className="text-xs font-bold text-slate-400">{new Date(item.date).toLocaleDateString('bn-BD')}</span>
+                        </div>
+                      </div>
+                      
+                      {/* Points & Score */}
+                      <div className="text-right shrink-0 flex flex-col items-end">
+                        <div className="flex items-center gap-1 mb-1">
+                          <span className="text-xs font-bold text-slate-400">স্কোর:</span>
+                          <span className="font-black text-base text-slate-700">{item.score}/{item.totalMarks}</span>
+                        </div>
+                        <div className="flex items-center gap-1 px-2.5 py-1 bg-emerald-100 rounded-full border border-emerald-200">
+                          <span className="text-xs font-black text-emerald-600">+{item.pts.toFixed(1)} pts</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-right shrink-0">
-                      <p className="font-black text-base text-indigo-600">{item.score}/{item.totalMarks}</p>
-                      <p className="text-xs font-bold text-emerald-500">+{item.pts.toFixed(1)} pts</p>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
@@ -690,7 +929,6 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({
           isExporting={false}
           attemptSheetRef={{ current: null } as any}
           getRankInfo={(att, q) => {
-            // ✅ fullQuizData.attempts subcollection থেকে ইতিমধ্যে loaded (history তে আছে)
             const histEntry = history.find(h => h.myAttemptData?.submittedAt === att.submittedAt);
             const allAttempts = histEntry?.fullQuizData?.attempts || q.attempts || [];
             const sorted = [...allAttempts].sort((a: any, b: any) => b.score - a.score);
