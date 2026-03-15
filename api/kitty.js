@@ -1,12 +1,12 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req, res) {
+  // CORS Headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
-  
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
   const API_KEY = process.env.GOOGLE_GEMINI_API_KEY;
   const { context } = req.body || {};
 
@@ -37,10 +37,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const message = data.candidates?.[0]?.content?.parts?.[0]?.text || "No response";
     return res.status(200).json({ message });
 
-  } catch (err: any) {
-    return res.status(500).json({ 
-      error: "Server Error", 
-      message: err.message 
-    });
+  } catch (err) {
+    return res.status(500).json({ error: "Server Error", message: err.message });
   }
 }
