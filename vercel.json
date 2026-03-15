@@ -1,15 +1,10 @@
 {
-  "buildCommand": "vite build",
-  "outputDirectory": "dist",
-  "framework": "vite",
   "functions": {
-    "api/kitty.js": {
-      "runtime": "nodejs20.x"
+    "api/*.js": {
+      "runtime": "vercel-node@latest"
+    },
+    "api/*.ts": {
+      "runtime": "vercel-node@latest"
     }
-  },
-  "routes": [
-    { "src": "/api/kitty", "dest": "/api/kitty.js" },
-    { "src": "^/assets/(.*)", "dest": "/assets/$1" },
-    { "src": "/(.*)", "dest": "/index.html" }
-  ]
+  }
 }
