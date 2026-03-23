@@ -37,8 +37,11 @@ interface AppContextType extends AppState {
   deleteStudent: (id: string) => Promise<void>;
   bulkDelete: (collectionName: string, ids: string[]) => Promise<void>;
   deleteClass: (id: string) => Promise<void>;
+  deleteSubject: (id: string) => Promise<void>;
+  deleteChapter: (id: string) => Promise<void>;
   deleteQuestion: (id: string) => Promise<void>;
   deleteAllQuestions: () => Promise<void>;
+  updateChapter: (id: string, data: any) => Promise<void>;
   setLanguage: (lang: Language) => void;
   setImpersonatedUser: (user: any | null) => void;
   t: (key: keyof typeof translations['en']) => string;
@@ -198,8 +201,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await batch.commit();
   };
 
-  const deleteClass = async (id: string) => await deleteDoc(doc(db, "classes", id));
+  const deleteClass    = async (id: string) => await deleteDoc(doc(db, "classes",   id));
+  const deleteSubject  = async (id: string) => await deleteDoc(doc(db, "subjects",  id));
+  const deleteChapter  = async (id: string) => await deleteDoc(doc(db, "chapters",  id));
   const deleteQuestion = async (id: string) => await deleteDoc(doc(db, "questions", id));
+  const updateChapter  = async (id: string, data: any) => await updateDoc(doc(db, "chapters", id), data);
 
   const deleteAllQuestions = async () => {
     const qSnap = await getDocs(collection(db, "questions"));
@@ -214,7 +220,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       bulkAddClasses, bulkAddSubjects, bulkAddChapters, addBulkQuestions,
       bulkAddTeachers, updateTeacher, deleteTeacher,
       updateStudent, deleteStudent,
-      bulkDelete, deleteClass, deleteQuestion, deleteAllQuestions,
+      bulkDelete, deleteClass, deleteSubject, deleteChapter,
+      deleteQuestion, deleteAllQuestions, updateChapter,
       setLanguage: (l: Language) => setState(p => ({ ...p, language: l })),
       setImpersonatedUser, 
       t
