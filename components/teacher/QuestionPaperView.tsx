@@ -100,7 +100,7 @@ export const QuestionPaperView: React.FC<QuestionPaperViewProps> = ({
 
   /* ─── Sidebar tab ──────────────────────────────────────── */
   const [activeTab, setActiveTab] = useState<'branding'|'page'|'font'|'layout'|'header'|'theme'>('branding');
-  const [sidebarOpen, setSidebarOpen] = useState(false); // ✅ mobile sidebar toggle
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   /* ─── PDF state ────────────────────────────────────────── */
   const [pdfLoading, setPdfLoading] = useState(false);
@@ -145,7 +145,6 @@ export const QuestionPaperView: React.FC<QuestionPaperViewProps> = ({
 
   const getQText   = (q: any) => q.text || q.questionText || q.question || '—';
   const getAnswer  = (q: any) => q.correctAnswer || q.answer || 'N/A';
-  // ✅ FIX: no type check — just check if options array exists
   const hasOptions = (q: any) => Array.isArray(q.options) && q.options.length > 0;
   const isTF       = (q: any) => {
     const t = (q.type || '').toString().toUpperCase().replace(/[_\s]/g, '');
@@ -160,8 +159,7 @@ export const QuestionPaperView: React.FC<QuestionPaperViewProps> = ({
     r.readAsDataURL(f);
   };
 
-  /* ─── PDF DOWNLOAD ─────────────────────────────────────── */
-  /* ✅ FIX: dynamically import html2pdf to avoid SSR issues  */
+  /* ─── PDF DOWNLOAD ───────────────────────────────────── */
   const handleDownload = async () => {
     const el = paperRef.current;
     if (!el || pdfLoading) return;
@@ -175,7 +173,8 @@ export const QuestionPaperView: React.FC<QuestionPaperViewProps> = ({
         image:       { type: 'jpeg', quality: 1.0 },
         html2canvas: { scale: 3, useCORS: true, scrollY: 0, letterRendering: true, allowTaint: true },
         jsPDF:       { unit: 'mm', format: PS.jsPDF, orientation },
-        pagebreak:   { mode: ['avoid-all', 'css', 'legacy'] },
+        // ✅ FIXED: Use 'css' mode to respect CSS page-break rules
+        pagebreak:   { mode: ['css', 'legacy'] },
       };
       await html2pdf().set(opt).from(el).save();
     } catch (err) {
@@ -747,7 +746,7 @@ export const QuestionPaperView: React.FC<QuestionPaperViewProps> = ({
                 backgroundColor: T.bg,
                 boxShadow:       '0 8px 40px rgba(0,0,0,0.18)',
                 position:        'relative',
-                overflow:        'hidden',
+                overflow:        'visible',
                 boxSizing:       'border-box',
               }}
             >
@@ -773,6 +772,9 @@ export const QuestionPaperView: React.FC<QuestionPaperViewProps> = ({
                   borderBottom: showHeaderBorder ? `2.5px solid ${primary}` : 'none',
                   paddingBottom: '16px',
                   marginBottom: '20px',
+                  // ✅ Prevent header from breaking across pages
+                  breakInside: 'avoid',
+                  pageBreakInside: 'avoid',
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginBottom: '8px' }}>
                     {showLogo && logoBase64 && (
@@ -830,6 +832,9 @@ export const QuestionPaperView: React.FC<QuestionPaperViewProps> = ({
                       fontSize: `${Math.max(9, fontSize - 2)}px`, fontWeight: 600,
                       color: accent, backgroundColor: `${accent}15`,
                       WebkitPrintColorAdjust: 'exact',
+                      // ✅ Prevent instructions from breaking
+                      breakInside: 'avoid',
+                      pageBreakInside: 'avoid',
                     }}>
                       📋 {instructions}
                     </div>
@@ -846,7 +851,10 @@ export const QuestionPaperView: React.FC<QuestionPaperViewProps> = ({
                     <div
                       key={q.id || index}
                       style={{
-                        pageBreakInside: 'avoid', breakInside: 'avoid',
+                        // ✅ KEY FIX: Allow questions to break across pages naturally
+                        // Remove fixed page break constraints to let content flow
+                        breakInside: 'auto',
+                        pageBreakInside: 'auto',
                         marginBottom: `${questionGap}px`,
                         border:        showBorder ? `1px solid ${primary}18` : 'none',
                         borderRadius:  showBorder ? '6px' : 0,
@@ -879,9 +887,17 @@ export const QuestionPaperView: React.FC<QuestionPaperViewProps> = ({
                             )}
                           </div>
 
-                          {/* ✅ MCQ Options — type-check-free */}
+                          {/* MCQ Options */}
                           {showOptions && hasOptions(q) && (
-                            <div style={{ display: 'grid', gridTemplateColumns: getOptionCols(), gap: '6px 20px', marginTop: '10px' }}>
+                            <div style={{ 
+                              display: 'grid', 
+                              gridTemplateColumns: getOptionCols(), 
+                              gap: '6px 20px', 
+                              marginTop: '10px',
+                              // ✅ Prevent options from breaking across pages
+                              breakInside: 'avoid',
+                              pageBreakInside: 'avoid',
+                            }}>
                               {q.options.map((opt: string, idx: number) => (
                                 <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                   <span style={{
@@ -900,7 +916,16 @@ export const QuestionPaperView: React.FC<QuestionPaperViewProps> = ({
 
                           {/* True / False */}
                           {showOptions && !hasOptions(q) && isTF(q) && (
-                            <div style={{ display: 'flex', gap: '24px', marginTop: '8px', fontStyle: 'italic', fontWeight: 700, color: primary }}>
+                            <div style={{ 
+                              display: 'flex', 
+                              gap: '24px', 
+                              marginTop: '8px', 
+                              fontStyle: 'italic', 
+                              fontWeight: 700, 
+                              color: primary,
+                              breakInside: 'avoid',
+                              pageBreakInside: 'avoid',
+                            }}>
                               <span>(a) True</span>
                               <span>(b) False</span>
                             </div>
@@ -908,7 +933,13 @@ export const QuestionPaperView: React.FC<QuestionPaperViewProps> = ({
 
                           {/* Answer */}
                           {showAnswers && (
-                            <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'center' }}>
+                            <div style={{ 
+                              marginTop: '10px', 
+                              display: 'flex', 
+                              justifyContent: 'center',
+                              breakInside: 'avoid',
+                              pageBreakInside: 'avoid',
+                            }}>
                               <div style={{
                                 border: `2px solid ${accent}`, padding: '5px 20px',
                                 backgroundColor: `${accent}15`, borderRadius: '8px',
@@ -928,7 +959,14 @@ export const QuestionPaperView: React.FC<QuestionPaperViewProps> = ({
                 </div>
 
                 {/* ── FOOTER ── */}
-                <div style={{ marginTop: '48px', borderTop: `1.5px solid ${primary}30`, paddingTop: '16px' }}>
+                <div style={{ 
+                  marginTop: '48px', 
+                  borderTop: `1.5px solid ${primary}30`, 
+                  paddingTop: '16px',
+                  // ✅ Prevent footer from breaking across pages
+                  breakInside: 'avoid',
+                  pageBreakInside: 'avoid',
+                }}>
                   {showQuote && quote && (
                     <p style={{
                       textAlign: 'center', color: accent, fontStyle: 'italic',
@@ -981,6 +1019,12 @@ export const QuestionPaperView: React.FC<QuestionPaperViewProps> = ({
         @media print {
           .no-print { display: none !important; }
           body { margin: 0 !important; background: white !important; }
+          
+          /* ✅ Ensure proper page breaks when printing */
+          @page {
+            margin: 0;
+            size: auto;
+          }
         }
         @media (max-width: 768px) {
           .paper-preview { padding: 8px !important; }
