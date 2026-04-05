@@ -134,375 +134,374 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
           </div>
         </div>
 
-        {/* Scrollable Content Area */}
-        <div className="flex-1 overflow-auto bg-slate-200 p-2 md:p-6">
-          {/* PDF Wrapper */}
-          <div className="w-full overflow-x-auto pb-4">
-            <div className="min-w-full flex justify-center">
-              <div 
-                id="premium-transcript" 
-                className="bg-white shadow-2xl"
-                style={{ 
-                  width: '794px',
-                  minWidth: '794px',
-                  maxWidth: '794px',
-                  margin: '0 auto',
-                  padding: '50px 40px',
-                  boxSizing: 'border-box',
-                  fontFamily: "'Hind Siliguri', sans-serif"
-                }}
-              >
-                
-                {/* Header - বড় ফন্ট */}
-                <div style={{ textAlign: 'center', marginBottom: '45px' }}>
-                  <h1 style={{ 
-                    fontSize: '64px', // আরও বড়
-                    fontWeight: '1000', 
-                    color: '#1e40af', 
-                    margin: '0', 
-                    textTransform: 'uppercase', 
-                    lineHeight: '1.1'
-                  }}>
-                    {coachingName}
-                  </h1>
-                  <div style={{ 
-                    height: '8px', 
-                    width: '120px', 
-                    backgroundColor: '#3b82f6', 
-                    margin: '25px auto', 
-                    borderRadius: '10px' 
-                  }}></div>
+        {/* Scrollable Content Area - Centered */}
+        <div className="flex-1 overflow-auto bg-slate-200">
+          {/* 
+            Wrapper: flex justify-center দিয়ে মাঝখানে আনা হয়েছে
+            এবং min-w-full সরিয়ে দিয়ে সঠিকভাবে কেন্দ্রীভূত করা হয়েছে
+          */}
+          <div className="w-full min-h-full flex justify-center p-4 md:p-8">
+            <div 
+              id="premium-transcript" 
+              className="bg-white shadow-2xl shrink-0"
+              style={{ 
+                width: '794px',
+                minWidth: '794px',
+                maxWidth: '794px',
+                margin: '0',
+                padding: '50px 40px',
+                boxSizing: 'border-box',
+                fontFamily: "'Hind Siliguri', sans-serif"
+              }}
+            >
+              
+              {/* Header */}
+              <div style={{ textAlign: 'center', marginBottom: '45px' }}>
+                <h1 style={{ 
+                  fontSize: '64px',
+                  fontWeight: '1000', 
+                  color: '#1e40af', 
+                  margin: '0', 
+                  textTransform: 'uppercase', 
+                  lineHeight: '1.1'
+                }}>
+                  {coachingName}
+                </h1>
+                <div style={{ 
+                  height: '8px', 
+                  width: '120px', 
+                  backgroundColor: '#3b82f6', 
+                  margin: '25px auto', 
+                  borderRadius: '10px' 
+                }}></div>
+                <p style={{ 
+                  fontSize: '24px',
+                  fontWeight: '900', 
+                  color: '#64748b', 
+                  textTransform: 'uppercase', 
+                  letterSpacing: '4px' 
+                }}>
+                  Academic Transcript Report
+                </p>
+              </div>
+
+              {/* Dashboard */}
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(3, 1fr)', 
+                gap: '25px', 
+                marginBottom: '50px' 
+              }}>
+                <div style={{ 
+                  padding: '35px 20px', 
+                  backgroundColor: '#f0f9ff', 
+                  borderRadius: '28px', 
+                  textAlign: 'center', 
+                  border: '3px solid #bae6fd', 
+                  WebkitPrintColorAdjust: 'exact' 
+                }}>
+                  <span style={{ 
+                    fontSize: '18px',
+                    fontWeight: '900', 
+                    color: '#0369a1', 
+                    textTransform: 'uppercase',
+                    display: 'block',
+                    marginBottom: '12px'
+                  }}>Student</span>
                   <p style={{ 
-                    fontSize: '24px', // বড়
+                    fontSize: '32px',
+                    fontWeight: '1000', 
+                    color: '#0c4a6e', 
+                    margin: '0',
+                    lineHeight: '1.2'
+                  }}>{attempt.studentName}</p>
+                </div>
+
+                <div style={{ 
+                  padding: '35px 20px', 
+                  backgroundColor: style.bg, 
+                  borderRadius: '28px', 
+                  textAlign: 'center', 
+                  border: `5px solid ${style.color}`, 
+                  boxShadow: '0 10px 25px -5px rgba(0,0,0,0.15)', 
+                  WebkitPrintColorAdjust: 'exact' 
+                }}>
+                  <div style={{ fontSize: '48px', lineHeight: '1' }}>{style.icon}</div>
+                  <p style={{ 
+                    fontSize: '44px',
+                    fontWeight: '1000', 
+                    color: '#0f172a', 
+                    margin: '10px 0' 
+                  }}>#{rankData.rank}</p>
+                  <span style={{ 
+                    fontSize: '16px',
+                    fontWeight: '900', 
+                    color: style.color,
+                    display: 'block'
+                  }}>{style.label}</span>
+                </div>
+
+                <div style={{ 
+                  padding: '35px 20px', 
+                  backgroundColor: '#f0fdf4', 
+                  borderRadius: '28px', 
+                  textAlign: 'center', 
+                  border: '3px solid #bbf7d0', 
+                  WebkitPrintColorAdjust: 'exact' 
+                }}>
+                  <span style={{ 
+                    fontSize: '18px',
+                    fontWeight: '900', 
+                    color: '#15803d', 
+                    textTransform: 'uppercase',
+                    display: 'block',
+                    marginBottom: '12px'
+                  }}>Score</span>
+                  <p style={{ 
+                    fontSize: '36px',
+                    fontWeight: '1000', 
+                    color: '#14532d', 
+                    margin: '0' 
+                  }}>{attempt.score}/{totalPossibleMarks}</p>
+                </div>
+              </div>
+
+              {/* Exam Analysis */}
+              <div style={{ marginBottom: '50px' }}>
+                <h3 style={{ 
+                  fontSize: '40px',
+                  fontWeight: '1000', 
+                  color: '#1e293b', 
+                  marginBottom: '35px', 
+                  borderLeft: '12px solid #2563eb', 
+                  paddingLeft: '25px' 
+                }}>EXAM ANALYSIS</h3>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
+                  {quiz.questions.map((q: any, idx: number) => {
+                    const userAns = String((attempt.answers as any)?.[q.id] || '').trim();
+                    const correctAns = String(q.answer || q.correctAnswer || '').trim();
+                    const isCorrect = userAns.toLowerCase() === correctAns.toLowerCase() && userAns !== "";
+                    
+                    const isGapFill = !q.options || q.options.length <= 1;
+
+                    return (
+                      <div 
+                        key={idx} 
+                        style={{ 
+                          padding: '35px', 
+                          borderRadius: '28px', 
+                          backgroundColor: isCorrect ? '#f0fdf4' : '#fff1f2', 
+                          border: '4px solid', 
+                          borderColor: isCorrect ? '#dcfce7' : '#fecdd3', 
+                          pageBreakInside: 'avoid', 
+                          WebkitPrintColorAdjust: 'exact' 
+                        }}
+                      >
+                        <p style={{ 
+                          fontSize: '32px',
+                          fontWeight: '900', 
+                          color: '#1e293b', 
+                          margin: '0 0 22px 0', 
+                          lineHeight: '1.5' 
+                        }}>
+                          <span style={{ 
+                            color: isCorrect ? '#16a34a' : '#e11d48', 
+                            marginRight: '15px',
+                            fontWeight: '1000',
+                            fontSize: '36px'
+                          }}>{idx + 1}.</span> 
+                          {q.text || q.questionText}
+                        </p>
+                        
+                        {isGapFill ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                            <div style={{ 
+                              padding: '22px 28px', 
+                              borderRadius: '16px', 
+                              backgroundColor: '#ffffff', 
+                              border: '4px dashed', 
+                              borderColor: isCorrect ? '#16a34a' : '#e11d48',
+                              color: isCorrect ? '#15803d' : '#e11d48',
+                              fontSize: '28px',
+                              fontWeight: '900'
+                            }}>
+                              <span style={{ 
+                                fontSize: '16px',
+                                textTransform: 'uppercase', 
+                                display: 'block', 
+                                opacity: 0.7,
+                                marginBottom: '8px',
+                                fontWeight: '900'
+                              }}>Your Answer:</span>
+                              {userAns || "No Answer"}
+                            </div>
+                            {!isCorrect && (
+                              <div style={{ 
+                                padding: '16px 20px', 
+                                color: '#16a34a', 
+                                fontSize: '24px',
+                                fontWeight: '900',
+                                backgroundColor: '#f0fdf4',
+                                borderRadius: '12px',
+                                border: '3px solid #86efac'
+                              }}>
+                                ✅ Correct: {correctAns}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div style={{ 
+                            display: 'grid', 
+                            gridTemplateColumns: '1fr 1fr', 
+                            gap: '16px' 
+                          }}>
+                            {(q.options || []).map((opt: string, oIdx: number) => {
+                              const isSelected = userAns === opt.trim();
+                              const isRight = correctAns === opt.trim();
+                              
+                              let optBg = '#ffffff';
+                              let optBorder = '#e2e8f0';
+                              let optColor = '#475569';
+
+                              if (isSelected && isRight) { 
+                                optBg = '#16a34a'; 
+                                optColor = '#ffffff'; 
+                                optBorder = '#16a34a'; 
+                              }
+                              else if (isSelected && !isRight) { 
+                                optBg = '#e11d48'; 
+                                optColor = '#ffffff'; 
+                                optBorder = '#e11d48'; 
+                              }
+                              else if (isRight) { 
+                                optBg = '#f0fdf4'; 
+                                optBorder = '#22c55e'; 
+                                optColor = '#15803d'; 
+                              }
+
+                              return (
+                                <div key={oIdx} style={{ 
+                                  padding: '22px 24px', 
+                                  borderRadius: '18px', 
+                                  fontSize: '24px',
+                                  fontWeight: '900', 
+                                  border: '3px solid', 
+                                  borderColor: optBorder, 
+                                  backgroundColor: optBg, 
+                                  color: optColor, 
+                                  display: 'flex', 
+                                  alignItems: 'center',
+                                  gap: '12px',
+                                  WebkitPrintColorAdjust: 'exact',
+                                  lineHeight: '1.4'
+                                }}>
+                                  <span style={{ 
+                                    opacity: 0.7, 
+                                    fontSize: '20px',
+                                    fontWeight: '1000',
+                                    minWidth: '30px'
+                                  }}>
+                                    {String.fromCharCode(65 + oIdx)}.
+                                  </span> 
+                                  <span style={{ flex: 1 }}>{opt}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div style={{ 
+                marginTop: '60px', 
+                borderTop: '5px solid #f1f5f9', 
+                paddingTop: '55px' 
+              }}>
+                <div style={{ textAlign: 'center', marginBottom: '55px' }}>
+                  <p style={{ 
+                    fontSize: '28px',
                     fontWeight: '900', 
                     color: '#64748b', 
-                    textTransform: 'uppercase', 
-                    letterSpacing: '4px' 
-                  }}>
-                    Academic Transcript Report
-                  </p>
-                </div>
-
-                {/* Dashboard - অনেক বড় সাইজ */}
-                <div style={{ 
-                  display: 'grid', 
-                  gridTemplateColumns: 'repeat(3, 1fr)', 
-                  gap: '25px', 
-                  marginBottom: '50px' 
-                }}>
-                  <div style={{ 
-                    padding: '35px 20px', 
-                    backgroundColor: '#f0f9ff', 
-                    borderRadius: '28px', 
-                    textAlign: 'center', 
-                    border: '3px solid #bae6fd', 
-                    WebkitPrintColorAdjust: 'exact' 
-                  }}>
-                    <span style={{ 
-                      fontSize: '18px', // বড়
-                      fontWeight: '900', 
-                      color: '#0369a1', 
-                      textTransform: 'uppercase',
-                      display: 'block',
-                      marginBottom: '12px'
-                    }}>Student</span>
-                    <p style={{ 
-                      fontSize: '32px', // অনেক বড়
-                      fontWeight: '1000', 
-                      color: '#0c4a6e', 
-                      margin: '0',
-                      lineHeight: '1.2'
-                    }}>{attempt.studentName}</p>
-                  </div>
-
-                  <div style={{ 
-                    padding: '35px 20px', 
-                    backgroundColor: style.bg, 
-                    borderRadius: '28px', 
-                    textAlign: 'center', 
-                    border: `5px solid ${style.color}`, 
-                    boxShadow: '0 10px 25px -5px rgba(0,0,0,0.15)', 
-                    WebkitPrintColorAdjust: 'exact' 
-                  }}>
-                    <div style={{ fontSize: '48px', lineHeight: '1' }}>{style.icon}</div>
-                    <p style={{ 
-                      fontSize: '44px', // অনেক বড়
-                      fontWeight: '1000', 
-                      color: '#0f172a', 
-                      margin: '10px 0' 
-                    }}>#{rankData.rank}</p>
-                    <span style={{ 
-                      fontSize: '16px', // বড়
-                      fontWeight: '900', 
-                      color: style.color,
-                      display: 'block'
-                    }}>{style.label}</span>
-                  </div>
-
-                  <div style={{ 
-                    padding: '35px 20px', 
-                    backgroundColor: '#f0fdf4', 
-                    borderRadius: '28px', 
-                    textAlign: 'center', 
-                    border: '3px solid #bbf7d0', 
-                    WebkitPrintColorAdjust: 'exact' 
-                  }}>
-                    <span style={{ 
-                      fontSize: '18px', // বড়
-                      fontWeight: '900', 
-                      color: '#15803d', 
-                      textTransform: 'uppercase',
-                      display: 'block',
-                      marginBottom: '12px'
-                    }}>Score</span>
-                    <p style={{ 
-                      fontSize: '36px', // অনেক বড়
-                      fontWeight: '1000', 
-                      color: '#14532d', 
-                      margin: '0' 
-                    }}>{attempt.score}/{totalPossibleMarks}</p>
-                  </div>
-                </div>
-
-                {/* Exam Analysis - প্রশ্নগুলো আরও বড় */}
-                <div style={{ marginBottom: '50px' }}>
-                  <h3 style={{ 
-                    fontSize: '40px', // বড়
+                    fontStyle: 'italic', 
+                    padding: '0 40px',
+                    lineHeight: '1.6'
+                  }}>"{randomQuote.text}"</p>
+                  <p style={{ 
+                    fontSize: '24px',
                     fontWeight: '1000', 
-                    color: '#1e293b', 
-                    marginBottom: '35px', 
-                    borderLeft: '12px solid #2563eb', 
-                    paddingLeft: '25px' 
-                  }}>EXAM ANALYSIS</h3>
-                  
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
-                    {quiz.questions.map((q: any, idx: number) => {
-                      const userAns = String((attempt.answers as any)?.[q.id] || '').trim();
-                      const correctAns = String(q.answer || q.correctAnswer || '').trim();
-                      const isCorrect = userAns.toLowerCase() === correctAns.toLowerCase() && userAns !== "";
-                      
-                      const isGapFill = !q.options || q.options.length <= 1;
-
-                      return (
-                        <div 
-                          key={idx} 
-                          style={{ 
-                            padding: '35px', // বেশি padding
-                            borderRadius: '28px', 
-                            backgroundColor: isCorrect ? '#f0fdf4' : '#fff1f2', 
-                            border: '4px solid', 
-                            borderColor: isCorrect ? '#dcfce7' : '#fecdd3', 
-                            pageBreakInside: 'avoid', 
-                            WebkitPrintColorAdjust: 'exact' 
-                          }}
-                        >
-                          {/* প্রশ্নের টেক্সট অনেক বড় */}
-                          <p style={{ 
-                            fontSize: '32px', // অনেক বড় (৩২px)
-                            fontWeight: '900', 
-                            color: '#1e293b', 
-                            margin: '0 0 22px 0', 
-                            lineHeight: '1.5' 
-                          }}>
-                            <span style={{ 
-                              color: isCorrect ? '#16a34a' : '#e11d48', 
-                              marginRight: '15px',
-                              fontWeight: '1000',
-                              fontSize: '36px'
-                            }}>{idx + 1}.</span> 
-                            {q.text || q.questionText}
-                          </p>
-                          
-                          {isGapFill ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                              <div style={{ 
-                                padding: '22px 28px', // বড় padding
-                                borderRadius: '16px', 
-                                backgroundColor: '#ffffff', 
-                                border: '4px dashed', 
-                                borderColor: isCorrect ? '#16a34a' : '#e11d48',
-                                color: isCorrect ? '#15803d' : '#e11d48',
-                                fontSize: '28px', // অনেক বড় (২৮px)
-                                fontWeight: '900'
-                              }}>
-                                <span style={{ 
-                                  fontSize: '16px', // বড়
-                                  textTransform: 'uppercase', 
-                                  display: 'block', 
-                                  opacity: 0.7,
-                                  marginBottom: '8px',
-                                  fontWeight: '900'
-                                }}>Your Answer:</span>
-                                {userAns || "No Answer"}
-                              </div>
-                              {!isCorrect && (
-                                <div style={{ 
-                                  padding: '16px 20px', 
-                                  color: '#16a34a', 
-                                  fontSize: '24px', // বড়
-                                  fontWeight: '900',
-                                  backgroundColor: '#f0fdf4',
-                                  borderRadius: '12px',
-                                  border: '3px solid #86efac'
-                                }}>
-                                  ✅ Correct: {correctAns}
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            /* Options - অনেক বড় সাইজে */
-                            <div style={{ 
-                              display: 'grid', 
-                              gridTemplateColumns: '1fr 1fr', 
-                              gap: '16px' 
-                            }}>
-                              {(q.options || []).map((opt: string, oIdx: number) => {
-                                const isSelected = userAns === opt.trim();
-                                const isRight = correctAns === opt.trim();
-                                
-                                let optBg = '#ffffff';
-                                let optBorder = '#e2e8f0';
-                                let optColor = '#475569';
-
-                                if (isSelected && isRight) { 
-                                  optBg = '#16a34a'; 
-                                  optColor = '#ffffff'; 
-                                  optBorder = '#16a34a'; 
-                                }
-                                else if (isSelected && !isRight) { 
-                                  optBg = '#e11d48'; 
-                                  optColor = '#ffffff'; 
-                                  optBorder = '#e11d48'; 
-                                }
-                                else if (isRight) { 
-                                  optBg = '#f0fdf4'; 
-                                  optBorder = '#22c55e'; 
-                                  optColor = '#15803d'; 
-                                }
-
-                                return (
-                                  <div key={oIdx} style={{ 
-                                    padding: '22px 24px', // বেশি padding
-                                    borderRadius: '18px', 
-                                    fontSize: '24px', // অনেক বড় (২৪px)
-                                    fontWeight: '900', 
-                                    border: '3px solid', 
-                                    borderColor: optBorder, 
-                                    backgroundColor: optBg, 
-                                    color: optColor, 
-                                    display: 'flex', 
-                                    alignItems: 'center',
-                                    gap: '12px',
-                                    WebkitPrintColorAdjust: 'exact',
-                                    lineHeight: '1.4'
-                                  }}>
-                                    <span style={{ 
-                                      opacity: 0.7, 
-                                      fontSize: '20px', // বড়
-                                      fontWeight: '1000',
-                                      minWidth: '30px'
-                                    }}>
-                                      {String.fromCharCode(65 + oIdx)}.
-                                    </span> 
-                                    <span style={{ flex: 1 }}>{opt}</span>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+                    color: '#2563eb', 
+                    marginTop: '20px' 
+                  }}>— {randomQuote.author}</p>
                 </div>
 
-                {/* Footer - অনেক বড় */}
                 <div style={{ 
-                  marginTop: '60px', 
-                  borderTop: '5px solid #f1f5f9', 
-                  paddingTop: '55px' 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center', 
+                  gap: '25px'
                 }}>
-                  <div style={{ textAlign: 'center', marginBottom: '55px' }}>
-                    <p style={{ 
-                      fontSize: '28px', // অনেক বড়
-                      fontWeight: '900', 
-                      color: '#64748b', 
-                      fontStyle: 'italic', 
-                      padding: '0 40px',
-                      lineHeight: '1.6'
-                    }}>"{randomQuote.text}"</p>
-                    <p style={{ 
-                      fontSize: '24px', // বড়
-                      fontWeight: '1000', 
-                      color: '#2563eb', 
-                      marginTop: '20px' 
-                    }}>— {randomQuote.author}</p>
-                  </div>
-
                   <div style={{ 
                     display: 'flex', 
-                    justifyContent: 'space-between', 
                     alignItems: 'center', 
-                    gap: '25px'
+                    gap: '15px' 
                   }}>
                     <div style={{ 
+                      width: '60px', 
+                      height: '60px', 
+                      background: '#2563eb', 
+                      borderRadius: '16px', 
+                      color: '#fff', 
                       display: 'flex', 
                       alignItems: 'center', 
-                      gap: '15px' 
-                    }}>
-                      <div style={{ 
-                        width: '60px', // বড়
-                        height: '60px', 
-                        background: '#2563eb', 
-                        borderRadius: '16px', 
-                        color: '#fff', 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center', 
-                        fontWeight: '1000', 
-                        fontSize: '32px', // বড়
-                        WebkitPrintColorAdjust: 'exact',
-                        flexShrink: 0
-                      }}>Q</div>
-                      <div>
-                        <p style={{ 
-                          margin: 0, 
-                          fontSize: '32px', // অনেক বড়
-                          fontWeight: '1000', 
-                          color: 'black',
-                          lineHeight: '1.2'
-                        }}>EDUQUIZ <span style={{ color: '#2563eb' }}>PRO</span></p>
-                        <p style={{ 
-                          margin: 0, 
-                          fontSize: '14px', // বড়
-                          color: '#94a3b8', 
-                          fontWeight: '900', 
-                          letterSpacing: '2px',
-                          textTransform: 'uppercase'
-                        }}>SMART ASSESSMENT SYSTEM</p>
-                      </div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
+                      justifyContent: 'center', 
+                      fontWeight: '1000', 
+                      fontSize: '32px', 
+                      WebkitPrintColorAdjust: 'exact',
+                      flexShrink: 0
+                    }}>Q</div>
+                    <div>
                       <p style={{ 
                         margin: 0, 
-                        fontSize: '14px', // বড়
+                        fontSize: '32px',
                         fontWeight: '1000', 
-                        color: '#94a3b8',
-                        textTransform: 'uppercase',
-                        letterSpacing: '1.5px'
-                      }}>OFFICIAL VERIFIED RECORD</p>
+                        color: 'black',
+                        lineHeight: '1.2'
+                      }}>EDUQUIZ <span style={{ color: '#2563eb' }}>PRO</span></p>
                       <p style={{ 
                         margin: 0, 
-                        fontSize: '18px', // বড়
+                        fontSize: '14px',
+                        color: '#94a3b8', 
                         fontWeight: '900', 
-                        color: '#1e293b',
-                        marginTop: '8px'
-                      }}>ID: {quiz.id.slice(0, 8).toUpperCase()}</p>
+                        letterSpacing: '2px',
+                        textTransform: 'uppercase'
+                      }}>SMART ASSESSMENT SYSTEM</p>
                     </div>
                   </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <p style={{ 
+                      margin: 0, 
+                      fontSize: '14px',
+                      fontWeight: '1000', 
+                      color: '#94a3b8',
+                      textTransform: 'uppercase',
+                      letterSpacing: '1.5px'
+                    }}>OFFICIAL VERIFIED RECORD</p>
+                    <p style={{ 
+                      margin: 0, 
+                      fontSize: '18px',
+                      fontWeight: '900', 
+                      color: '#1e293b',
+                      marginTop: '8px'
+                    }}>ID: {quiz.id.slice(0, 8).toUpperCase()}</p>
+                  </div>
                 </div>
-
               </div>
+
             </div>
           </div>
         </div>
