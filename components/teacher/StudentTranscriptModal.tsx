@@ -68,7 +68,7 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
         scale: 2,
         useCORS: true,
         scrollY: 0,
-        windowWidth: 794,   // A4 width in px at 96dpi — 1:1 mapping, so content fills page
+        windowWidth: 794,
         letterRendering: true,
         allowTaint: true,
         ignoreElements: (el: Element) => el.classList.contains('no-print'),
@@ -79,10 +79,8 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
     html2pdf().set(opt).from(element).save();
   };
 
-  // ── Shared content styles (used in PDF, scaled for screen) ──
+  // ── Shared content styles ──
   const S = {
-    // A4 = 794px wide, margin 10mm each side ≈ 75px → content ≈ 644px wide
-    // We fix the PDF container to 774px (794 - 20px margins)
     wrapper: {
       width: '774px',
       boxSizing: 'border-box' as const,
@@ -170,6 +168,94 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
     fLabel:   { fontSize: '10px', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase' as const, letterSpacing: '1px', margin: 0 },
   };
 
+  // ── PDF Styles - শুধু PDF-এ বড় ফন্ট হবে ──
+  const PDF_S = {
+    wrapper: {
+      width: '774px',
+      boxSizing: 'border-box' as const,
+      padding: '40px 35px', // কমিয়ে দিলাম যাতে বড় ফন্ট ফিট হয়
+      background: '#ffffff',
+      fontFamily: "'Hind Siliguri', sans-serif",
+    },
+
+    // ── Header ──
+    h1:        { fontSize: '72px', fontWeight: 900, color: '#1e40af', margin: 0, textTransform: 'uppercase' as const, lineHeight: 1.1 }, // বড়
+    bar:       { height: '8px', width: '140px', backgroundColor: '#3b82f6', margin: '22px auto', borderRadius: '10px' },
+    subtitle:  { fontSize: '22px', fontWeight: 900, color: '#64748b', textTransform: 'uppercase' as const, letterSpacing: '4px' }, // বড়
+
+    // ── Stat cards ──
+    grid3:     { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '45px' },
+    card:      { padding: '32px 20px', borderRadius: '24px', textAlign: 'center' as const, WebkitPrintColorAdjust: 'exact' as const }, // বড় padding
+    cardLabel: { fontSize: '16px', fontWeight: 900, textTransform: 'uppercase' as const, display: 'block', marginBottom: '12px' }, // বড়
+    cardVal:   { fontSize: '36px', fontWeight: 900, margin: 0, lineHeight: 1.2, wordBreak: 'break-word' as const }, // বড়
+
+    // ── Exam section ──
+    sectionHead: { fontSize: '40px', fontWeight: 900, color: '#1e293b', marginBottom: '32px', borderLeft: '12px solid #2563eb', paddingLeft: '20px' }, // বড়
+
+    // ── Question card ──
+    qCard: (correct: boolean) => ({
+      padding: '32px 30px', // বড়
+      borderRadius: '22px',
+      backgroundColor: correct ? '#f0fdf4' : '#fff1f2',
+      border: '3px solid', // বড় border
+      borderColor: correct ? '#dcfce7' : '#fecdd3',
+      pageBreakInside: 'avoid' as const,
+      breakInside: 'avoid' as const,
+      WebkitPrintColorAdjust: 'exact' as const,
+    }),
+    qNum: (correct: boolean) => ({
+      color: correct ? '#16a34a' : '#e11d48',
+      marginRight: '12px',
+      fontWeight: 900,
+      fontSize: '34px', // বড়
+    }),
+    qText: { fontSize: '32px', fontWeight: 900, color: '#1e293b', margin: '0 0 22px 0', lineHeight: 1.5 }, // অনেক বড়
+
+    // ── Options grid ──
+    optGrid:  { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' },
+    opt: (bg: string, border: string, color: string) => ({
+      padding: '20px 22px', // বড়
+      borderRadius: '16px',
+      fontSize: '26px', // অনেক বড়
+      fontWeight: 800,
+      border: '3px solid', // বড় border
+      borderColor: border,
+      backgroundColor: bg,
+      color,
+      display: 'flex',
+      alignItems: 'center',
+      gap: '12px',
+      WebkitPrintColorAdjust: 'exact' as const,
+      lineHeight: 1.4,
+    }),
+    optLetter: { opacity: 0.7, fontSize: '20px', fontWeight: 900, minWidth: '28px' }, // বড়
+
+    // ── Gap fill ──
+    gapBox: (correct: boolean) => ({
+      padding: '22px 26px', // বড়
+      borderRadius: '16px',
+      backgroundColor: '#fff',
+      border: '4px dashed', // বড়
+      borderColor: correct ? '#16a34a' : '#e11d48',
+      color: correct ? '#15803d' : '#e11d48',
+      fontSize: '28px', // অনেক বড়
+      fontWeight: 800,
+    }),
+    gapLabel: { fontSize: '14px', textTransform: 'uppercase' as const, display: 'block', opacity: 0.7, marginBottom: '8px', fontWeight: 900 }, // বড়
+    correctBox: { padding: '16px 20px', color: '#16a34a', fontSize: '24px', fontWeight: 800, backgroundColor: '#f0fdf4', borderRadius: '12px', border: '3px solid #86efac' }, // বড়
+
+    // ── Footer ──
+    footer:   { marginTop: '55px', borderTop: '5px solid #f1f5f9', paddingTop: '45px' }, // বড়
+    quote:    { fontSize: '24px', fontWeight: 800, color: '#64748b', fontStyle: 'italic' as const, lineHeight: 1.6, textAlign: 'center' as const }, // বড়
+    qAuthor:  { fontSize: '20px', fontWeight: 900, color: '#2563eb', marginTop: '16px', textAlign: 'center' as const }, // বড়
+    fRow:     { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '20px', marginTop: '40px' },
+    fLogo:    { width: '58px', height: '58px', background: '#2563eb', borderRadius: '15px', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '32px', WebkitPrintColorAdjust: 'exact' as const, flexShrink: 0 }, // বড়
+    fAppName: { margin: 0, fontSize: '30px', fontWeight: 900, color: '#000', lineHeight: 1.2 }, // বড়
+    fSub:     { margin: 0, fontSize: '12px', color: '#94a3b8', fontWeight: 900, letterSpacing: '1.5px', textTransform: 'uppercase' as const }, // বড়
+    fId:      { fontSize: '16px', fontWeight: 900, color: '#1e293b', margin: 0, marginTop: '6px' }, // বড়
+    fLabel:   { fontSize: '12px', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase' as const, letterSpacing: '1.5px', margin: 0 }, // বড়
+  };
+
   return (
     <>
       {/* ── Responsive styles for screen view ── */}
@@ -216,10 +302,6 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
 
           {/* ── Scrollable preview ── */}
           <div className="flex-1 overflow-auto bg-slate-300">
-            {/*
-              Screen: scale down 774px wide content to fit phone screen
-              PDF:    windowWidth=794 so 774px content = A4 full width
-            */}
             <ScaledWrapper>
               <div
                 id="premium-transcript"
@@ -264,7 +346,7 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
 
                       return (
                         <div key={idx} className="no-break" style={S.qCard(isCorrect)}>
-                          {/* Question text — centered */}
+                          {/* Question text */}
                           <p style={{ ...S.qText, textAlign: 'center' }}>
                             <span style={S.qNum(isCorrect)}>{idx + 1}.</span>
                             {q.text || q.questionText}
@@ -281,7 +363,7 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
                               )}
                             </div>
                           ) : (
-                            /* Options — centered grid */
+                            /* Options */
                             <div style={{ ...S.optGrid, justifyItems: 'center' }}>
                               {(q.options || []).map((opt: string, oIdx: number) => {
                                 const isSelected = userAns === opt.trim();
@@ -333,7 +415,7 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
   );
 };
 
-// ── ScaledWrapper — mobile screen এ scale করে, PDF এ কোনো effect নেই ──
+// ── ScaledWrapper ──
 const ScaledWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [scale, setScale] = React.useState(1);
   const ref = React.useRef<HTMLDivElement>(null);
@@ -341,7 +423,6 @@ const ScaledWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   React.useEffect(() => {
     const update = () => {
       const vw = window.innerWidth;
-      // 774px content + 32px padding
       const needed = 774 + 32;
       if (vw < needed) {
         setScale(vw / needed);
@@ -369,7 +450,6 @@ const ScaledWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       <div style={{
         transform: `scale(${scale})`,
         transformOrigin: 'top center',
-        // compensate height so scroll works correctly
         marginBottom: scale < 1 ? `calc(${(scale - 1) * 100}% )` : '0',
       }}>
         <div style={{ boxShadow: '0 4px 32px rgba(0,0,0,0.18)' }}>
