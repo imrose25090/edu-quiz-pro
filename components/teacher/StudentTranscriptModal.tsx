@@ -232,28 +232,28 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
                   <p style={S.subtitle}>Academic Transcript Report</p>
                 </div>
 
-                {/* ── STAT CARDS ── */}
-                <div style={S.grid3}>
-                  {/* Student */}
-                  <div style={{ ...S.card, backgroundColor: '#f0f9ff', border: '2px solid #bae6fd' }}>
-                    <span style={{ ...S.cardLabel, color: '#0369a1' }}>Student</span>
-                    <p style={{ ...S.cardVal, color: '#0c4a6e' }}>{attempt.studentName}</p>
-                  </div>
-                  {/* Rank */}
-<div style={{ ...S.card, backgroundColor: rankStyle.bg, border: `3px solid ${rankStyle.color}`, boxShadow: '0 8px 20px -4px rgba(0,0,0,0.12)' }}>
-  <div style={{ fontSize: '38px', lineHeight: 1 }}>{rankStyle.icon}</div>
+              {/* ── STAT CARDS ── */}
+<div style={S.grid3}>
+  {/* Student */}
+  <div style={{ ...S.card, backgroundColor: '#f0f9ff', border: '2px solid #bae6fd' }}>
+    <span style={{ ...S.cardLabel, color: '#0369a1' }}>Student</span>
+    <p style={{ ...S.cardVal, color: '#0c4a6e' }}>{attempt.studentName}</p>
+  </div>
   
-  {/* এখানে র‍্যাঙ্ক এবং মোট সংখ্যা (Total) একসাথে দেখানো হয়েছে */}
-  <p style={{ fontSize: '34px', fontWeight: 900, color: '#0f172a', margin: '8px 0' }}>
-    #{rankData.rank}
-    <span style={{ fontSize: '18px', color: '#64748b', fontWeight: 700, marginLeft: '4px' }}>
-      / {rankData.total}
-    </span>
-  </p>
+  {/* Rank - এখন কতজনের মধ্যে কত তম দেখাবে */}
+  <div style={{ ...S.card, backgroundColor: rankStyle.bg, border: `3px solid ${rankStyle.color}`, boxShadow: '0 8px 20px -4px rgba(0,0,0,0.12)' }}>
+    <div style={{ fontSize: '38px', lineHeight: 1 }}>{rankStyle.icon}</div>
+    <p style={{ fontSize: '34px', fontWeight: 900, color: '#0f172a', margin: '8px 0' }}>
+      #{rankData.rank}<span style={{ fontSize: '20px', color: '#64748b' }}>/{rankData.total}</span>
+    </p>
+    <span style={{ fontSize: '11px', fontWeight: 900, color: rankStyle.color, display: 'block' }}>{rankStyle.label}</span>
+  </div>
   
-  <span style={{ fontSize: '11px', fontWeight: 900, color: rankStyle.color, display: 'block' }}>
-    {rankStyle.label}
-  </span>
+  {/* Score */}
+  <div style={{ ...S.card, backgroundColor: '#f0fdf4', border: '2px solid #bbf7d0' }}>
+    <span style={{ ...S.cardLabel, color: '#15803d' }}>Score</span>
+    <p style={{ ...S.cardVal, color: '#14532d', fontSize: '28px' }}>{attempt.score}/{totalPossibleMarks}</p>
+  </div>
 </div>
 
                 {/* ── EXAM ANALYSIS ── */}
