@@ -84,7 +84,7 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
     // A4 = 794px wide, margin 10mm each side ≈ 75px → content ≈ 644px wide
     // We fix the PDF container to 774px (794 - 20px margins)
     wrapper: {
-      width: '774px',
+      width: '750px',
       boxSizing: 'border-box' as const,
       padding: '48px 44px',
       background: '#ffffff',
@@ -123,14 +123,14 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
       fontWeight: 900,
       fontSize: '26px',
     }),
-    qText: { fontSize: '24px', fontWeight: 900, color: '#1e293b', margin: '0 0 18px 0', lineHeight: 1.45 },
+    qText: { fontSize: '26px', fontWeight: 900, color: '#1e293b', margin: '0 0 18px 0', lineHeight: 1.45 },
 
     // ── Options grid ──
     optGrid:  { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' },
     opt: (bg: string, border: string, color: string) => ({
       padding: '16px 18px',
       borderRadius: '14px',
-      fontSize: '20px',
+      fontSize: '24px',
       fontWeight: 800,
       border: '2px solid',
       borderColor: border,
