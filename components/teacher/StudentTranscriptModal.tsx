@@ -68,7 +68,7 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
         scale: 2,
         useCORS: true,
         scrollY: 0,
-        windowWidth: 794,
+        windowWidth: 794,   // A4 width in px at 96dpi — 1:1 mapping, so content fills page
         letterRendering: true,
         allowTaint: true,
         ignoreElements: (el: Element) => el.classList.contains('no-print'),
@@ -79,8 +79,10 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
     html2pdf().set(opt).from(element).save();
   };
 
-  // ── Screen Styles (মোবাইল/ডেস্কটপ ভিউ) ──
+  // ── Shared content styles (used in PDF, scaled for screen) ──
   const S = {
+    // A4 = 794px wide, margin 10mm each side ≈ 75px → content ≈ 644px wide
+    // We fix the PDF container to 774px (794 - 20px margins)
     wrapper: {
       width: '774px',
       boxSizing: 'border-box' as const,
@@ -88,15 +90,23 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
       background: '#ffffff',
       fontFamily: "'Hind Siliguri', sans-serif",
     },
+
+    // ── Header ──
     h1:        { fontSize: '52px', fontWeight: 900, color: '#1e40af', margin: 0, textTransform: 'uppercase' as const, lineHeight: 1.1 },
     bar:       { height: '6px', width: '110px', backgroundColor: '#3b82f6', margin: '18px auto', borderRadius: '10px' },
     subtitle:  { fontSize: '17px', fontWeight: 900, color: '#64748b', textTransform: 'uppercase' as const, letterSpacing: '3px' },
+
+    // ── Stat cards ──
     grid3:     { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '18px', marginBottom: '40px' },
     card:      { padding: '24px 16px', borderRadius: '22px', textAlign: 'center' as const, WebkitPrintColorAdjust: 'exact' as const },
     cardLabel: { fontSize: '13px', fontWeight: 900, textTransform: 'uppercase' as const, display: 'block', marginBottom: '10px' },
     cardVal:   { fontSize: '26px', fontWeight: 900, margin: 0, lineHeight: 1.2, wordBreak: 'break-word' as const },
+
+    // ── Exam section ──
     sectionHead: { fontSize: '30px', fontWeight: 900, color: '#1e293b', marginBottom: '28px', borderLeft: '10px solid #2563eb', paddingLeft: '18px' },
     qList:       { display: 'flex', flexDirection: 'column' as const, gap: '22px' },
+
+    // ── Question card ──
     qCard: (correct: boolean) => ({
       padding: '26px 28px',
       borderRadius: '20px',
@@ -114,6 +124,8 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
       fontSize: '26px',
     }),
     qText: { fontSize: '24px', fontWeight: 900, color: '#1e293b', margin: '0 0 18px 0', lineHeight: 1.45 },
+
+    // ── Options grid ──
     optGrid:  { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' },
     opt: (bg: string, border: string, color: string) => ({
       padding: '16px 18px',
@@ -131,6 +143,8 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
       lineHeight: 1.3,
     }),
     optLetter: { opacity: 0.7, fontSize: '15px', fontWeight: 900, minWidth: '22px' },
+
+    // ── Gap fill ──
     gapBox: (correct: boolean) => ({
       padding: '18px 22px',
       borderRadius: '14px',
@@ -143,6 +157,8 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
     }),
     gapLabel: { fontSize: '12px', textTransform: 'uppercase' as const, display: 'block', opacity: 0.7, marginBottom: '6px', fontWeight: 900 },
     correctBox: { padding: '12px 16px', color: '#16a34a', fontSize: '20px', fontWeight: 800, backgroundColor: '#f0fdf4', borderRadius: '10px', border: '2px solid #86efac' },
+
+    // ── Footer ──
     footer:   { marginTop: '48px', borderTop: '4px solid #f1f5f9', paddingTop: '40px' },
     quote:    { fontSize: '19px', fontWeight: 800, color: '#64748b', fontStyle: 'italic' as const, lineHeight: 1.55, textAlign: 'center' as const },
     qAuthor:  { fontSize: '17px', fontWeight: 900, color: '#2563eb', marginTop: '14px', textAlign: 'center' as const },
@@ -152,110 +168,6 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
     fSub:     { margin: 0, fontSize: '10px', color: '#94a3b8', fontWeight: 900, letterSpacing: '1px', textTransform: 'uppercase' as const },
     fId:      { fontSize: '14px', fontWeight: 900, color: '#1e293b', margin: 0, marginTop: '4px' },
     fLabel:   { fontSize: '10px', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase' as const, letterSpacing: '1px', margin: 0 },
-  };
-
-  // ── PDF Styles - শুধু PDF-এ বড় ফন্ট এবং বাম থেকে শুরু ──
-  const PDF_S = {
-    wrapper: {
-      width: '774px',
-      boxSizing: 'border-box' as const,
-      padding: '35px 30px',
-      background: '#ffffff',
-      fontFamily: "'Hind Siliguri', sans-serif",
-    },
-    h1:        { fontSize: '68px', fontWeight: 900, color: '#1e40af', margin: 0, textTransform: 'uppercase' as const, lineHeight: 1.1 },
-    bar:       { height: '8px', width: '130px', backgroundColor: '#3b82f6', margin: '20px auto', borderRadius: '10px' },
-    subtitle:  { fontSize: '20px', fontWeight: 900, color: '#64748b', textTransform: 'uppercase' as const, letterSpacing: '4px' },
-    grid3:     { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '18px', marginBottom: '40px' },
-    card:      { padding: '28px 18px', borderRadius: '24px', textAlign: 'center' as const, WebkitPrintColorAdjust: 'exact' as const },
-    cardLabel: { fontSize: '14px', fontWeight: 900, textTransform: 'uppercase' as const, display: 'block', marginBottom: '10px' },
-    cardVal:   { fontSize: '30px', fontWeight: 900, margin: 0, lineHeight: 1.2, wordBreak: 'break-word' as const },
-    sectionHead: { fontSize: '36px', fontWeight: 900, color: '#1e293b', marginBottom: '28px', borderLeft: '12px solid #2563eb', paddingLeft: '18px' },
-    qList:       { display: 'flex', flexDirection: 'column' as const, gap: '24px' },
-    
-    // প্রশ্ন কার্ড - বাম থেকে শুরু, মাঝখানে border
-    qCard: (correct: boolean) => ({
-      padding: '28px 32px', // সমান padding দুই দিকে
-      borderRadius: '22px',
-      backgroundColor: correct ? '#f0fdf4' : '#fff1f2',
-      border: '3px solid',
-      borderColor: correct ? '#dcfce7' : '#fecdd3',
-      pageBreakInside: 'avoid' as const,
-      breakInside: 'avoid' as const,
-      WebkitPrintColorAdjust: 'exact' as const,
-      // মাঝখানে রাখার জন্য
-      margin: '0 auto',
-      width: 'calc(100% - 40px)', // দুই দিকে গ্যাপ রেখে মাঝখানে
-      maxWidth: '700px',
-    }),
-    
-    // প্রশ্ন নম্বর - বামে
-    qNum: (correct: boolean) => ({
-      color: correct ? '#16a34a' : '#e11d48',
-      marginRight: '12px',
-      fontWeight: 900,
-      fontSize: '38px', // আরও বড়
-    }),
-    
-    // প্রশ্ন টেক্সট - বামে শুরু, আরও বড় ফন্ট
-    qText: { 
-      fontSize: '36px', // আরও বড় (আগে 32px)
-      fontWeight: 900, 
-      color: '#1e293b', 
-      margin: '0 0 20px 0', 
-      lineHeight: 1.5,
-      textAlign: 'left' as const, // বাম থেকে শুরু
-    },
-    
-    // অপশন গ্রিড
-    optGrid:  { 
-      display: 'grid', 
-      gridTemplateColumns: '1fr 1fr', 
-      gap: '14px',
-      width: '100%',
-    },
-    
-    opt: (bg: string, border: string, color: string) => ({
-      padding: '18px 20px',
-      borderRadius: '16px',
-      fontSize: '24px', // বড়
-      fontWeight: 800,
-      border: '3px solid',
-      borderColor: border,
-      backgroundColor: bg,
-      color,
-      display: 'flex',
-      alignItems: 'center',
-      gap: '12px',
-      WebkitPrintColorAdjust: 'exact' as const,
-      lineHeight: 1.4,
-    }),
-    
-    optLetter: { opacity: 0.7, fontSize: '18px', fontWeight: 900, minWidth: '26px' },
-    
-    gapBox: (correct: boolean) => ({
-      padding: '20px 24px',
-      borderRadius: '16px',
-      backgroundColor: '#fff',
-      border: '4px dashed',
-      borderColor: correct ? '#16a34a' : '#e11d48',
-      color: correct ? '#15803d' : '#e11d48',
-      fontSize: '28px',
-      fontWeight: 800,
-    }),
-    
-    gapLabel: { fontSize: '13px', textTransform: 'uppercase' as const, display: 'block', opacity: 0.7, marginBottom: '8px', fontWeight: 900 },
-    correctBox: { padding: '14px 18px', color: '#16a34a', fontSize: '24px', fontWeight: 800, backgroundColor: '#f0fdf4', borderRadius: '12px', border: '3px solid #86efac' },
-    
-    footer:   { marginTop: '50px', borderTop: '4px solid #f1f5f9', paddingTop: '42px' },
-    quote:    { fontSize: '22px', fontWeight: 800, color: '#64748b', fontStyle: 'italic' as const, lineHeight: 1.6, textAlign: 'center' as const },
-    qAuthor:  { fontSize: '18px', fontWeight: 900, color: '#2563eb', marginTop: '14px', textAlign: 'center' as const },
-    fRow:     { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '18px', marginTop: '38px' },
-    fLogo:    { width: '54px', height: '54px', background: '#2563eb', borderRadius: '14px', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '28px', WebkitPrintColorAdjust: 'exact' as const, flexShrink: 0 },
-    fAppName: { margin: 0, fontSize: '28px', fontWeight: 900, color: '#000', lineHeight: 1.2 },
-    fSub:     { margin: 0, fontSize: '11px', color: '#94a3b8', fontWeight: 900, letterSpacing: '1.5px', textTransform: 'uppercase' as const },
-    fId:      { fontSize: '15px', fontWeight: 900, color: '#1e293b', margin: 0, marginTop: '5px' },
-    fLabel:   { fontSize: '11px', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase' as const, letterSpacing: '1.5px', margin: 0 },
   };
 
   return (
@@ -304,6 +216,10 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
 
           {/* ── Scrollable preview ── */}
           <div className="flex-1 overflow-auto bg-slate-300">
+            {/*
+              Screen: scale down 774px wide content to fit phone screen
+              PDF:    windowWidth=794 so 774px content = A4 full width
+            */}
             <ScaledWrapper>
               <div
                 id="premium-transcript"
@@ -348,8 +264,8 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
 
                       return (
                         <div key={idx} className="no-break" style={S.qCard(isCorrect)}>
-                          {/* Question text - বাম থেকে শুরু */}
-                          <p style={S.qText}>
+                          {/* Question text — centered */}
+                          <p style={{ ...S.qText, textAlign: 'center' }}>
                             <span style={S.qNum(isCorrect)}>{idx + 1}.</span>
                             {q.text || q.questionText}
                           </p>
@@ -365,8 +281,8 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
                               )}
                             </div>
                           ) : (
-                            /* Options */
-                            <div style={S.optGrid}>
+                            /* Options — centered grid */
+                            <div style={{ ...S.optGrid, justifyItems: 'center' }}>
                               {(q.options || []).map((opt: string, oIdx: number) => {
                                 const isSelected = userAns === opt.trim();
                                 const isRight    = correctAns === opt.trim();
@@ -375,9 +291,9 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
                                 else if (isSelected && !isRight) { bg='#e11d48'; color='#fff'; border='#e11d48'; }
                                 else if (isRight)                { bg='#f0fdf4'; border='#22c55e'; color='#15803d'; }
                                 return (
-                                  <div key={oIdx} style={S.opt(bg, border, color)}>
+                                  <div key={oIdx} style={{ ...S.opt(bg, border, color), width: '100%', justifyContent: 'center' }}>
                                     <span style={S.optLetter}>{String.fromCharCode(65+oIdx)}.</span>
-                                    <span style={{ flex: 1, wordBreak: 'break-word' }}>{opt}</span>
+                                    <span style={{ flex: 1, textAlign: 'center', wordBreak: 'break-word' }}>{opt}</span>
                                   </div>
                                 );
                               })}
@@ -417,7 +333,7 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
   );
 };
 
-// ── ScaledWrapper ──
+// ── ScaledWrapper — mobile screen এ scale করে, PDF এ কোনো effect নেই ──
 const ScaledWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [scale, setScale] = React.useState(1);
   const ref = React.useRef<HTMLDivElement>(null);
@@ -425,6 +341,7 @@ const ScaledWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   React.useEffect(() => {
     const update = () => {
       const vw = window.innerWidth;
+      // 774px content + 32px padding
       const needed = 774 + 32;
       if (vw < needed) {
         setScale(vw / needed);
@@ -452,6 +369,7 @@ const ScaledWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       <div style={{
         transform: `scale(${scale})`,
         transformOrigin: 'top center',
+        // compensate height so scroll works correctly
         marginBottom: scale < 1 ? `calc(${(scale - 1) * 100}% )` : '0',
       }}>
         <div style={{ boxShadow: '0 4px 32px rgba(0,0,0,0.18)' }}>
