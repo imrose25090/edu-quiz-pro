@@ -10,15 +10,15 @@ interface StudentTranscriptModalProps {
   getRankInfo: (att: QuizAttempt, q: Quiz) => { rank: number; total: number };
 }
 
-export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({ 
-  attempt, quiz, onClose, getRankInfo 
+export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
+  attempt, quiz, onClose, getRankInfo
 }) => {
   const rankData = getRankInfo(attempt, quiz);
   const totalPossibleMarks = Number(quiz.config?.totalMarks || quiz.questions.length);
 
-  const [coachingName, setCoachingName] = useState(() => {
-    return localStorage.getItem('coaching_name') || "MENTORA ACADEMY";
-  });
+  const [coachingName, setCoachingName] = useState(() =>
+    localStorage.getItem('coaching_name') || "MENTORA ACADEMY"
+  );
   const [isEditingName, setIsEditingName] = useState(false);
   const [randomQuote, setRandomQuote] = useState({ text: "", author: "" });
 
@@ -29,27 +29,17 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
       { text: "Education is the most powerful weapon which you can use to change the world.", author: "Nelson Mandela" },
       { text: "The beautiful thing about learning is that no one can take it away from you.", author: "B.B. King" },
       { text: "Live as if you were to die tomorrow. Learn as if you were to live forever.", author: "Mahatma Gandhi" },
-      { text: "The mind is not a vessel to be filled, but a fire to be kindled.", author: "Plutarch" },
       { text: "An investment in knowledge pays the best interest.", author: "Benjamin Franklin" },
       { text: "Intelligence plus character—that is the goal of true education.", author: "Martin Luther King Jr." },
       { text: "The roots of education are bitter, but the fruit is sweet.", author: "Aristotle" },
-      { text: "Teachers can open the door, but you must enter it yourself.", author: "Chinese Proverb" },
       { text: "Learning never exhausts the mind.", author: "Leonardo da Vinci" },
-      { text: "Tell me and I forget. Teach me and I remember. Involve me and I learn.", author: "Benjamin Franklin" },
-      { text: "Don't watch the clock; do what it does. Keep going.", author: "Sam Levenson" },
-      { text: "The secret of getting ahead is getting started.", author: "Mark Twain" },
-      { text: "It always seems impossible until it's done.", author: "Nelson Mandela" },
-      { text: "I find that the harder I work, the more luck I seem to have.", author: "Thomas Jefferson" },
-      { text: "Success is walking from failure to failure with no loss of enthusiasm.", author: "Winston Churchill" },
-      { text: "Opportunities don't happen. You create them.", author: "Chris Grosser" },
-      { text: "Dream big and dare to fail.", author: "Norman Vaughan" },
-      { text: "Action is the foundational key to all success.", author: "Pablo Picasso" },
-      { text: "It does not matter how slowly you go as long as you do not stop.", author: "Confucius" },
-      { text: "Our greatest glory is not in never falling, but in rising every time we fall.", author: "Oliver Goldsmith" },
-      { text: "Believe you can and you're halfway there.", author: "Theodore Roosevelt" }
+      { text: "Believe you can and you're halfway there.", author: "Theodore Roosevelt" },
+      { text: "Indeed, with hardship will be ease.", author: "Surah Ash-Sharh 94:6" },
+      { text: "Allah does not burden a soul beyond that it can bear.", author: "Surah Al-Baqarah 2:286" },
+      { text: "There is not for man except that for which he strives.", author: "Surah An-Najm 53:39" },
+      { text: "My success is not but through Allah.", author: "Surah Hud 11:88" },
     ];
-    const randomIndex = Math.floor(Math.random() * quotes.length);
-    setRandomQuote(quotes[randomIndex]);
+    setRandomQuote(quotes[Math.floor(Math.random() * quotes.length)]);
   }, []);
 
   const saveCoachingName = (name: string) => {
@@ -58,455 +48,332 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
   };
 
   const getRankStyle = (rank: number) => {
-    if (rank === 1) return { label: "1ST CHAMPION", color: "#fbbf24", icon: "🥇", bg: "#fffbeb" };
+    if (rank === 1) return { label: "1ST CHAMPION",  color: "#fbbf24", icon: "🥇", bg: "#fffbeb" };
     if (rank === 2) return { label: "2ND RUNNER UP", color: "#94a3b8", icon: "🥈", bg: "#f8fafc" };
-    if (rank === 3) return { label: "3RD PLACE", color: "#b45309", icon: "🥉", bg: "#fff7ed" };
-    return { label: "PARTICIPANT", color: "#64748b", icon: "📖", bg: "#f8fafc" };
+    if (rank === 3) return { label: "3RD PLACE",     color: "#b45309", icon: "🥉", bg: "#fff7ed" };
+    return               { label: "PARTICIPANT",     color: "#64748b", icon: "📖", bg: "#f8fafc" };
   };
+  const rankStyle = getRankStyle(rankData.rank);
 
-  const style = getRankStyle(rankData.rank);
-
+  // ── PDF download ───────────────────────────────────────
   const handleDownload = () => {
     const element = document.getElementById('premium-transcript');
     if (!element) return;
-    
     const fileName = `${quiz.title.replace(/\s+/g, '_')}_${attempt.studentName.replace(/\s+/g, '_')}.pdf`;
-
     const opt = {
-      margin: [8, 8, 8, 8],
+      margin: [10, 10, 10, 10],
       filename: fileName,
       image: { type: 'jpeg', quality: 1.0 },
-      html2canvas: { 
-        scale: 3,
-        useCORS: true, 
-        scrollY: 0, 
-        windowWidth: 1200,
-        windowHeight: 1600,
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        scrollY: 0,
+        windowWidth: 794,   // A4 width in px at 96dpi — 1:1 mapping, so content fills page
         letterRendering: true,
         allowTaint: true,
+        ignoreElements: (el: Element) => el.classList.contains('no-print'),
       },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+      pagebreak: { mode: ['css', 'legacy'], avoid: '.no-break' }
     };
-
     html2pdf().set(opt).from(element).save();
   };
 
+  // ── Shared content styles (used in PDF, scaled for screen) ──
+  const S = {
+    // A4 = 794px wide, margin 10mm each side ≈ 75px → content ≈ 644px wide
+    // We fix the PDF container to 774px (794 - 20px margins)
+    wrapper: {
+      width: '774px',
+      boxSizing: 'border-box' as const,
+      padding: '48px 44px',
+      background: '#ffffff',
+      fontFamily: "'Hind Siliguri', sans-serif",
+    },
+
+    // ── Header ──
+    h1:        { fontSize: '52px', fontWeight: 900, color: '#1e40af', margin: 0, textTransform: 'uppercase' as const, lineHeight: 1.1 },
+    bar:       { height: '6px', width: '110px', backgroundColor: '#3b82f6', margin: '18px auto', borderRadius: '10px' },
+    subtitle:  { fontSize: '17px', fontWeight: 900, color: '#64748b', textTransform: 'uppercase' as const, letterSpacing: '3px' },
+
+    // ── Stat cards ──
+    grid3:     { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '18px', marginBottom: '40px' },
+    card:      { padding: '24px 16px', borderRadius: '22px', textAlign: 'center' as const, WebkitPrintColorAdjust: 'exact' as const },
+    cardLabel: { fontSize: '13px', fontWeight: 900, textTransform: 'uppercase' as const, display: 'block', marginBottom: '10px' },
+    cardVal:   { fontSize: '26px', fontWeight: 900, margin: 0, lineHeight: 1.2, wordBreak: 'break-word' as const },
+
+    // ── Exam section ──
+    sectionHead: { fontSize: '30px', fontWeight: 900, color: '#1e293b', marginBottom: '28px', borderLeft: '10px solid #2563eb', paddingLeft: '18px' },
+    qList:       { display: 'flex', flexDirection: 'column' as const, gap: '22px' },
+
+    // ── Question card ──
+    qCard: (correct: boolean) => ({
+      padding: '26px 28px',
+      borderRadius: '20px',
+      backgroundColor: correct ? '#f0fdf4' : '#fff1f2',
+      border: '2px solid',
+      borderColor: correct ? '#dcfce7' : '#fecdd3',
+      pageBreakInside: 'avoid' as const,
+      breakInside: 'avoid' as const,
+      WebkitPrintColorAdjust: 'exact' as const,
+    }),
+    qNum: (correct: boolean) => ({
+      color: correct ? '#16a34a' : '#e11d48',
+      marginRight: '10px',
+      fontWeight: 900,
+      fontSize: '26px',
+    }),
+    qText: { fontSize: '24px', fontWeight: 900, color: '#1e293b', margin: '0 0 18px 0', lineHeight: 1.45 },
+
+    // ── Options grid ──
+    optGrid:  { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' },
+    opt: (bg: string, border: string, color: string) => ({
+      padding: '16px 18px',
+      borderRadius: '14px',
+      fontSize: '20px',
+      fontWeight: 800,
+      border: '2px solid',
+      borderColor: border,
+      backgroundColor: bg,
+      color,
+      display: 'flex',
+      alignItems: 'center',
+      gap: '10px',
+      WebkitPrintColorAdjust: 'exact' as const,
+      lineHeight: 1.3,
+    }),
+    optLetter: { opacity: 0.7, fontSize: '15px', fontWeight: 900, minWidth: '22px' },
+
+    // ── Gap fill ──
+    gapBox: (correct: boolean) => ({
+      padding: '18px 22px',
+      borderRadius: '14px',
+      backgroundColor: '#fff',
+      border: '3px dashed',
+      borderColor: correct ? '#16a34a' : '#e11d48',
+      color: correct ? '#15803d' : '#e11d48',
+      fontSize: '22px',
+      fontWeight: 800,
+    }),
+    gapLabel: { fontSize: '12px', textTransform: 'uppercase' as const, display: 'block', opacity: 0.7, marginBottom: '6px', fontWeight: 900 },
+    correctBox: { padding: '12px 16px', color: '#16a34a', fontSize: '20px', fontWeight: 800, backgroundColor: '#f0fdf4', borderRadius: '10px', border: '2px solid #86efac' },
+
+    // ── Footer ──
+    footer:   { marginTop: '48px', borderTop: '4px solid #f1f5f9', paddingTop: '40px' },
+    quote:    { fontSize: '19px', fontWeight: 800, color: '#64748b', fontStyle: 'italic' as const, lineHeight: 1.55, textAlign: 'center' as const },
+    qAuthor:  { fontSize: '17px', fontWeight: 900, color: '#2563eb', marginTop: '14px', textAlign: 'center' as const },
+    fRow:     { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', marginTop: '36px' },
+    fLogo:    { width: '48px', height: '48px', background: '#2563eb', borderRadius: '13px', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '26px', WebkitPrintColorAdjust: 'exact' as const, flexShrink: 0 },
+    fAppName: { margin: 0, fontSize: '24px', fontWeight: 900, color: '#000', lineHeight: 1.2 },
+    fSub:     { margin: 0, fontSize: '10px', color: '#94a3b8', fontWeight: 900, letterSpacing: '1px', textTransform: 'uppercase' as const },
+    fId:      { fontSize: '14px', fontWeight: 900, color: '#1e293b', margin: 0, marginTop: '4px' },
+    fLabel:   { fontSize: '10px', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase' as const, letterSpacing: '1px', margin: 0 },
+  };
+
   return (
-    <div className="fixed inset-0 bg-slate-900/95 backdrop-blur-md flex items-center justify-center z-[100] p-0 md:p-4 font-['Hind_Siliguri']">
-      {/* Main Container */}
-      <div className="bg-white w-full h-full md:h-[98vh] md:max-w-6xl md:rounded-2xl flex flex-col overflow-hidden shadow-2xl">
-        
-        {/* Header Controls */}
-        <div className="p-3 md:p-4 bg-white border-b flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 no-print shadow-sm shrink-0">
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <button 
-              onClick={() => setIsEditingName(!isEditingName)} 
-              className="text-xs sm:text-sm font-bold text-indigo-600 uppercase bg-indigo-50 px-3 sm:px-4 py-2 rounded-lg hover:bg-indigo-100 transition-colors whitespace-nowrap"
-            >
-              {isEditingName ? 'Save' : 'Edit Name'}
-            </button>
-            {isEditingName && (
-              <input 
-                className="border-2 border-indigo-600 px-3 py-1.5 rounded-lg font-bold text-sm sm:text-base outline-none flex-1 sm:w-48 text-black"
-                value={coachingName}
-                onChange={(e) => saveCoachingName(e.target.value)}
-                autoFocus
-              />
-            )}
-          </div>
-          <div className="flex gap-2 w-full sm:w-auto justify-end">
-            <button 
-              onClick={handleDownload} 
-              className="bg-indigo-600 text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl font-black text-xs sm:text-sm uppercase shadow-lg active:scale-95 transition-all flex items-center gap-2 whitespace-nowrap"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              <span>Download PDF</span>
-            </button>
-            <button 
-              onClick={onClose} 
-              className="w-10 h-10 bg-slate-100 text-slate-500 rounded-xl font-black text-xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shrink-0"
-            >
-              ×
-            </button>
-          </div>
-        </div>
+    <>
+      {/* ── Responsive styles for screen view ── */}
+      <style>{`
+        @media (max-width: 840px) {
+          #transcript-scaler {
+            transform-origin: top center;
+            transform: scale(var(--ts, 1));
+          }
+        }
+        .no-print { }
+      `}</style>
 
-        {/* Scrollable Content Area */}
-        <div className="flex-1 overflow-auto bg-slate-200">
-          {/* 
-            IMPORTANT: w-fit এবং mx-auto দিয়ে কন্টেন্টকে মাঝখানে আনা হয়েছে
-            এবং overflow-x-auto দিয়ে স্ক্রল করা যায়
-          */}
-          <div className="w-full min-h-full flex justify-center items-start p-2 md:p-6">
-            <div 
-              id="premium-transcript" 
-              className="bg-white shadow-2xl shrink-0"
-              style={{ 
-                width: '680px', // কমিয়ে দেওয়া হয়েছে (794px থেকে 680px)
-                minWidth: '680px',
-                maxWidth: '680px',
-                margin: '0',
-                padding: '35px 25px', // কমিয়ে দেওয়া হয়েছে (50px 40px থেকে 35px 25px)
-                boxSizing: 'border-box',
-                fontFamily: "'Hind Siliguri', sans-serif"
-              }}
-            >
-              
-              {/* Header */}
-              <div style={{ textAlign: 'center', marginBottom: '35px' }}>
-                <h1 style={{ 
-                  fontSize: '48px', // কমিয়ে দেওয়া হয়েছে
-                  fontWeight: '1000', 
-                  color: '#1e40af', 
-                  margin: '0', 
-                  textTransform: 'uppercase', 
-                  lineHeight: '1.1'
-                }}>
-                  {coachingName}
-                </h1>
-                <div style={{ 
-                  height: '6px', 
-                  width: '100px', 
-                  backgroundColor: '#3b82f6', 
-                  margin: '20px auto', 
-                  borderRadius: '10px' 
-                }}></div>
-                <p style={{ 
-                  fontSize: '16px',
-                  fontWeight: '900', 
-                  color: '#64748b', 
-                  textTransform: 'uppercase', 
-                  letterSpacing: '3px' 
-                }}>
-                  Academic Transcript Report
-                </p>
-              </div>
+      <div className="fixed inset-0 bg-slate-900/95 backdrop-blur-md flex items-center justify-center z-[100] p-0 font-['Hind_Siliguri']">
+        <div className="bg-white w-full h-full md:h-[98vh] md:max-w-6xl md:rounded-2xl flex flex-col overflow-hidden shadow-2xl">
 
-              {/* Dashboard - ছোট সাইজ */}
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(3, 1fr)', 
-                gap: '15px', // কমিয়ে দেওয়া হয়েছে
-                marginBottom: '35px' 
-              }}>
-                <div style={{ 
-                  padding: '25px 12px', // কমিয়ে দেওয়া হয়েছে
-                  backgroundColor: '#f0f9ff', 
-                  borderRadius: '20px', 
-                  textAlign: 'center', 
-                  border: '2px solid #bae6fd', 
-                  WebkitPrintColorAdjust: 'exact' 
-                }}>
-                  <span style={{ 
-                    fontSize: '12px',
-                    fontWeight: '900', 
-                    color: '#0369a1', 
-                    textTransform: 'uppercase',
-                    display: 'block',
-                    marginBottom: '8px'
-                  }}>Student</span>
-                  <p style={{ 
-                    fontSize: '22px', // কমিয়ে দেওয়া হয়েছে
-                    fontWeight: '1000', 
-                    color: '#0c4a6e', 
-                    margin: '0',
-                    lineHeight: '1.2',
-                    wordBreak: 'break-word'
-                  }}>{attempt.studentName}</p>
-                </div>
-
-                <div style={{ 
-                  padding: '25px 12px', 
-                  backgroundColor: style.bg, 
-                  borderRadius: '20px', 
-                  textAlign: 'center', 
-                  border: `3px solid ${style.color}`, 
-                  boxShadow: '0 8px 16px -4px rgba(0,0,0,0.1)', 
-                  WebkitPrintColorAdjust: 'exact' 
-                }}>
-                  <div style={{ fontSize: '36px', lineHeight: '1' }}>{style.icon}</div>
-                  <p style={{ 
-                    fontSize: '32px', // কমিয়ে দেওয়া হয়েছে
-                    fontWeight: '1000', 
-                    color: '#0f172a', 
-                    margin: '8px 0' 
-                  }}>#{rankData.rank}</p>
-                  <span style={{ 
-                    fontSize: '11px',
-                    fontWeight: '900', 
-                    color: style.color,
-                    display: 'block'
-                  }}>{style.label}</span>
-                </div>
-
-                <div style={{ 
-                  padding: '25px 12px', 
-                  backgroundColor: '#f0fdf4', 
-                  borderRadius: '20px', 
-                  textAlign: 'center', 
-                  border: '2px solid #bbf7d0', 
-                  WebkitPrintColorAdjust: 'exact' 
-                }}>
-                  <span style={{ 
-                    fontSize: '12px',
-                    fontWeight: '900', 
-                    color: '#15803d', 
-                    textTransform: 'uppercase',
-                    display: 'block',
-                    marginBottom: '8px'
-                  }}>Score</span>
-                  <p style={{ 
-                    fontSize: '26px', // কমিয়ে দেওয়া হয়েছে
-                    fontWeight: '1000', 
-                    color: '#14532d', 
-                    margin: '0' 
-                  }}>{attempt.score}/{totalPossibleMarks}</p>
-                </div>
-              </div>
-
-              {/* Exam Analysis - ছোট সাইজ */}
-              <div style={{ marginBottom: '35px' }}>
-                <h3 style={{ 
-                  fontSize: '28px', // কমিয়ে দেওয়া হয়েছে
-                  fontWeight: '1000', 
-                  color: '#1e293b', 
-                  marginBottom: '25px', 
-                  borderLeft: '8px solid #2563eb', 
-                  paddingLeft: '15px' 
-                }}>EXAM ANALYSIS</h3>
-                
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                  {quiz.questions.map((q: any, idx: number) => {
-                    const userAns = String((attempt.answers as any)?.[q.id] || '').trim();
-                    const correctAns = String(q.answer || q.correctAnswer || '').trim();
-                    const isCorrect = userAns.toLowerCase() === correctAns.toLowerCase() && userAns !== "";
-                    
-                    const isGapFill = !q.options || q.options.length <= 1;
-
-                    return (
-                      <div 
-                        key={idx} 
-                        style={{ 
-                          padding: '22px', // কমিয়ে দেওয়া হয়েছে
-                          borderRadius: '18px', 
-                          backgroundColor: isCorrect ? '#f0fdf4' : '#fff1f2', 
-                          border: '2px solid', 
-                          borderColor: isCorrect ? '#dcfce7' : '#fecdd3', 
-                          pageBreakInside: 'avoid', 
-                          WebkitPrintColorAdjust: 'exact' 
-                        }}
-                      >
-                        {/* প্রশ্নের টেক্সট */}
-                        <p style={{ 
-                          fontSize: '22px', // কমিয়ে দেওয়া হয়েছে (আগে 32px)
-                          fontWeight: '900', 
-                          color: '#1e293b', 
-                          margin: '0 0 15px 0', 
-                          lineHeight: '1.4' 
-                        }}>
-                          <span style={{ 
-                            color: isCorrect ? '#16a34a' : '#e11d48', 
-                            marginRight: '10px',
-                            fontWeight: '1000',
-                            fontSize: '24px'
-                          }}>{idx + 1}.</span> 
-                          {q.text || q.questionText}
-                        </p>
-                        
-                        {isGapFill ? (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            <div style={{ 
-                              padding: '15px 18px', 
-                              borderRadius: '12px', 
-                              backgroundColor: '#ffffff', 
-                              border: '3px dashed', 
-                              borderColor: isCorrect ? '#16a34a' : '#e11d48',
-                              color: isCorrect ? '#15803d' : '#e11d48',
-                              fontSize: '20px', // কমিয়ে দেওয়া হয়েছে
-                              fontWeight: '800'
-                            }}>
-                              <span style={{ 
-                                fontSize: '11px',
-                                textTransform: 'uppercase', 
-                                display: 'block', 
-                                opacity: 0.7,
-                                marginBottom: '5px',
-                                fontWeight: '900'
-                              }}>Your Answer:</span>
-                              {userAns || "No Answer"}
-                            </div>
-                            {!isCorrect && (
-                              <div style={{ 
-                                padding: '10px 14px', 
-                                color: '#16a34a', 
-                                fontSize: '18px', // কমিয়ে দেওয়া হয়েছে
-                                fontWeight: '800',
-                                backgroundColor: '#f0fdf4',
-                                borderRadius: '8px',
-                                border: '2px solid #86efac'
-                              }}>
-                                ✅ Correct: {correctAns}
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          /* Options - ছোট সাইজে */
-                          <div style={{ 
-                            display: 'grid', 
-                            gridTemplateColumns: '1fr 1fr', 
-                            gap: '10px' // কমিয়ে দেওয়া হয়েছে
-                          }}>
-                            {(q.options || []).map((opt: string, oIdx: number) => {
-                              const isSelected = userAns === opt.trim();
-                              const isRight = correctAns === opt.trim();
-                              
-                              let optBg = '#ffffff';
-                              let optBorder = '#e2e8f0';
-                              let optColor = '#475569';
-
-                              if (isSelected && isRight) { 
-                                optBg = '#16a34a'; 
-                                optColor = '#ffffff'; 
-                                optBorder = '#16a34a'; 
-                              }
-                              else if (isSelected && !isRight) { 
-                                optBg = '#e11d48'; 
-                                optColor = '#ffffff'; 
-                                optBorder = '#e11d48'; 
-                              }
-                              else if (isRight) { 
-                                optBg = '#f0fdf4'; 
-                                optBorder = '#22c55e'; 
-                                optColor = '#15803d'; 
-                              }
-
-                              return (
-                                <div key={oIdx} style={{ 
-                                  padding: '14px 16px', // কমিয়ে দেওয়া হয়েছে
-                                  borderRadius: '12px', 
-                                  fontSize: '17px', // কমিয়ে দেওয়া হয়েছে (আগে 24px)
-                                  fontWeight: '800', 
-                                  border: '2px solid', 
-                                  borderColor: optBorder, 
-                                  backgroundColor: optBg, 
-                                  color: optColor, 
-                                  display: 'flex', 
-                                  alignItems: 'center',
-                                  gap: '8px',
-                                  WebkitPrintColorAdjust: 'exact',
-                                  lineHeight: '1.3'
-                                }}>
-                                  <span style={{ 
-                                    opacity: 0.7, 
-                                    fontSize: '14px',
-                                    fontWeight: '900',
-                                    minWidth: '22px'
-                                  }}>
-                                    {String.fromCharCode(65 + oIdx)}.
-                                  </span> 
-                                  <span style={{ flex: 1, wordBreak: 'break-word' }}>{opt}</span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Footer - ছোট সাইজ */}
-              <div style={{ 
-                marginTop: '40px', 
-                borderTop: '3px solid #f1f5f9', 
-                paddingTop: '35px' 
-              }}>
-                <div style={{ textAlign: 'center', marginBottom: '35px' }}>
-                  <p style={{ 
-                    fontSize: '18px', // কমিয়ে দেওয়া হয়েছে
-                    fontWeight: '800', 
-                    color: '#64748b', 
-                    fontStyle: 'italic', 
-                    padding: '0 20px',
-                    lineHeight: '1.5'
-                  }}>"{randomQuote.text}"</p>
-                  <p style={{ 
-                    fontSize: '16px', // কমিয়ে দেওয়া হয়েছে
-                    fontWeight: '1000', 
-                    color: '#2563eb', 
-                    marginTop: '12px' 
-                  }}>— {randomQuote.author}</p>
-                </div>
-
-                <div style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center', 
-                  gap: '15px'
-                }}>
-                  <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '10px' 
-                  }}>
-                    <div style={{ 
-                      width: '45px', // কমিয়ে দেওয়া হয়েছে
-                      height: '45px', 
-                      background: '#2563eb', 
-                      borderRadius: '12px', 
-                      color: '#fff', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center', 
-                      fontWeight: '1000', 
-                      fontSize: '24px', 
-                      WebkitPrintColorAdjust: 'exact',
-                      flexShrink: 0
-                    }}>Q</div>
-                    <div>
-                      <p style={{ 
-                        margin: 0, 
-                        fontSize: '22px', // কমিয়ে দেওয়া হয়েছে
-                        fontWeight: '1000', 
-                        color: 'black',
-                        lineHeight: '1.2'
-                      }}>EDUQUIZ <span style={{ color: '#2563eb' }}>PRO</span></p>
-                      <p style={{ 
-                        margin: 0, 
-                        fontSize: '10px',
-                        color: '#94a3b8', 
-                        fontWeight: '900', 
-                        letterSpacing: '1px',
-                        textTransform: 'uppercase'
-                      }}>SMART ASSESSMENT SYSTEM</p>
-                    </div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <p style={{ 
-                      margin: 0, 
-                      fontSize: '10px',
-                      fontWeight: '1000', 
-                      color: '#94a3b8',
-                      textTransform: 'uppercase',
-                      letterSpacing: '1px'
-                    }}>OFFICIAL VERIFIED RECORD</p>
-                    <p style={{ 
-                      margin: 0, 
-                      fontSize: '13px',
-                      fontWeight: '900', 
-                      color: '#1e293b',
-                      marginTop: '4px'
-                    }}>ID: {quiz.id.slice(0, 8).toUpperCase()}</p>
-                  </div>
-                </div>
-              </div>
-
+          {/* ── Topbar ── */}
+          <div className="no-print p-3 md:p-4 bg-white border-b flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-sm shrink-0">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <button onClick={() => setIsEditingName(!isEditingName)}
+                className="text-xs sm:text-sm font-bold text-indigo-600 uppercase bg-indigo-50 px-3 sm:px-4 py-2 rounded-lg hover:bg-indigo-100 transition-colors whitespace-nowrap">
+                {isEditingName ? '✓ Save' : '✏️ Edit Name'}
+              </button>
+              {isEditingName && (
+                <input className="border-2 border-indigo-600 px-3 py-1.5 rounded-lg font-bold text-sm outline-none flex-1 sm:w-52 text-black"
+                  value={coachingName} autoFocus
+                  onChange={e => saveCoachingName(e.target.value)}/>
+              )}
+            </div>
+            <div className="flex gap-2 w-full sm:w-auto justify-end">
+              <button onClick={handleDownload}
+                className="bg-indigo-600 text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl font-black text-xs sm:text-sm uppercase shadow-lg active:scale-95 transition-all flex items-center gap-2 whitespace-nowrap">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                Download PDF
+              </button>
+              <button onClick={onClose}
+                className="w-10 h-10 bg-slate-100 text-slate-500 rounded-xl font-black text-xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shrink-0">
+                ×
+              </button>
             </div>
           </div>
+
+          {/* ── Scrollable preview ── */}
+          <div className="flex-1 overflow-auto bg-slate-300">
+            {/*
+              Screen: scale down 774px wide content to fit phone screen
+              PDF:    windowWidth=794 so 774px content = A4 full width
+            */}
+            <ScaledWrapper>
+              <div
+                id="premium-transcript"
+                style={S.wrapper}
+              >
+                {/* ── HEADER ── */}
+                <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+                  <h1 style={S.h1}>{coachingName}</h1>
+                  <div style={S.bar}/>
+                  <p style={S.subtitle}>Academic Transcript Report</p>
+                </div>
+
+                {/* ── STAT CARDS ── */}
+                <div style={S.grid3}>
+                  {/* Student */}
+                  <div style={{ ...S.card, backgroundColor: '#f0f9ff', border: '2px solid #bae6fd' }}>
+                    <span style={{ ...S.cardLabel, color: '#0369a1' }}>Student</span>
+                    <p style={{ ...S.cardVal, color: '#0c4a6e' }}>{attempt.studentName}</p>
+                  </div>
+                  {/* Rank */}
+                  <div style={{ ...S.card, backgroundColor: rankStyle.bg, border: `3px solid ${rankStyle.color}`, boxShadow: '0 8px 20px -4px rgba(0,0,0,0.12)' }}>
+                    <div style={{ fontSize: '38px', lineHeight: 1 }}>{rankStyle.icon}</div>
+                    <p style={{ fontSize: '34px', fontWeight: 900, color: '#0f172a', margin: '8px 0' }}>#{rankData.rank}</p>
+                    <span style={{ fontSize: '11px', fontWeight: 900, color: rankStyle.color, display: 'block' }}>{rankStyle.label}</span>
+                  </div>
+                  {/* Score */}
+                  <div style={{ ...S.card, backgroundColor: '#f0fdf4', border: '2px solid #bbf7d0' }}>
+                    <span style={{ ...S.cardLabel, color: '#15803d' }}>Score</span>
+                    <p style={{ ...S.cardVal, color: '#14532d', fontSize: '28px' }}>{attempt.score}/{totalPossibleMarks}</p>
+                  </div>
+                </div>
+
+                {/* ── EXAM ANALYSIS ── */}
+                <div style={{ marginBottom: '40px' }}>
+                  <h3 style={S.sectionHead}>EXAM ANALYSIS</h3>
+                  <div style={S.qList}>
+                    {quiz.questions.map((q: any, idx: number) => {
+                      const userAns   = String((attempt.answers as any)?.[q.id] || '').trim();
+                      const correctAns= String(q.answer || q.correctAnswer || '').trim();
+                      const isCorrect = userAns.toLowerCase() === correctAns.toLowerCase() && userAns !== '';
+                      const isGapFill = !q.options || q.options.length <= 1;
+
+                      return (
+                        <div key={idx} className="no-break" style={S.qCard(isCorrect)}>
+                          {/* Question text — centered */}
+                          <p style={{ ...S.qText, textAlign: 'center' }}>
+                            <span style={S.qNum(isCorrect)}>{idx + 1}.</span>
+                            {q.text || q.questionText}
+                          </p>
+
+                          {isGapFill ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                              <div style={S.gapBox(isCorrect)}>
+                                <span style={S.gapLabel}>Your Answer:</span>
+                                {userAns || 'No Answer'}
+                              </div>
+                              {!isCorrect && (
+                                <div style={S.correctBox}>✅ Correct: {correctAns}</div>
+                              )}
+                            </div>
+                          ) : (
+                            /* Options — centered grid */
+                            <div style={{ ...S.optGrid, justifyItems: 'center' }}>
+                              {(q.options || []).map((opt: string, oIdx: number) => {
+                                const isSelected = userAns === opt.trim();
+                                const isRight    = correctAns === opt.trim();
+                                let bg = '#fff', border = '#e2e8f0', color = '#475569';
+                                if      (isSelected && isRight)  { bg='#16a34a'; color='#fff'; border='#16a34a'; }
+                                else if (isSelected && !isRight) { bg='#e11d48'; color='#fff'; border='#e11d48'; }
+                                else if (isRight)                { bg='#f0fdf4'; border='#22c55e'; color='#15803d'; }
+                                return (
+                                  <div key={oIdx} style={{ ...S.opt(bg, border, color), width: '100%', justifyContent: 'center' }}>
+                                    <span style={S.optLetter}>{String.fromCharCode(65+oIdx)}.</span>
+                                    <span style={{ flex: 1, textAlign: 'center', wordBreak: 'break-word' }}>{opt}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* ── FOOTER ── */}
+                <div style={S.footer}>
+                  <p style={S.quote}>"{randomQuote.text}"</p>
+                  <p style={S.qAuthor}>— {randomQuote.author}</p>
+                  <div style={S.fRow}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={S.fLogo}>Q</div>
+                      <div>
+                        <p style={S.fAppName}>EDUQUIZ <span style={{ color: '#2563eb' }}>PRO</span></p>
+                        <p style={S.fSub}>Smart Assessment System</p>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <p style={S.fLabel}>Official Verified Record</p>
+                      <p style={S.fId}>ID: {quiz.id.slice(0, 8).toUpperCase()}</p>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </ScaledWrapper>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};
+
+// ── ScaledWrapper — mobile screen এ scale করে, PDF এ কোনো effect নেই ──
+const ScaledWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [scale, setScale] = React.useState(1);
+  const ref = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const update = () => {
+      const vw = window.innerWidth;
+      // 774px content + 32px padding
+      const needed = 774 + 32;
+      if (vw < needed) {
+        setScale(vw / needed);
+      } else {
+        setScale(1);
+      }
+    };
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      style={{
+        width: '100%',
+        minHeight: '100%',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'flex-start',
+        padding: '16px 0',
+      }}
+    >
+      <div style={{
+        transform: `scale(${scale})`,
+        transformOrigin: 'top center',
+        // compensate height so scroll works correctly
+        marginBottom: scale < 1 ? `calc(${(scale - 1) * 100}% )` : '0',
+      }}>
+        <div style={{ boxShadow: '0 4px 32px rgba(0,0,0,0.18)' }}>
+          {children}
         </div>
       </div>
     </div>
