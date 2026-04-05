@@ -240,17 +240,21 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
                     <p style={{ ...S.cardVal, color: '#0c4a6e' }}>{attempt.studentName}</p>
                   </div>
                   {/* Rank */}
-                  <div style={{ ...S.card, backgroundColor: rankStyle.bg, border: `3px solid ${rankStyle.color}`, boxShadow: '0 8px 20px -4px rgba(0,0,0,0.12)' }}>
-                    <div style={{ fontSize: '38px', lineHeight: 1 }}>{rankStyle.icon}</div>
-                    <p style={{ fontSize: '34px', fontWeight: 900, color: '#0f172a', margin: '8px 0' }}>#{rankData.rank}</p>
-                    <span style={{ fontSize: '11px', fontWeight: 900, color: rankStyle.color, display: 'block' }}>{rankStyle.label}</span>
-                  </div>
-                  {/* Score */}
-                  <div style={{ ...S.card, backgroundColor: '#f0fdf4', border: '2px solid #bbf7d0' }}>
-                    <span style={{ ...S.cardLabel, color: '#15803d' }}>Score</span>
-                    <p style={{ ...S.cardVal, color: '#14532d', fontSize: '28px' }}>{attempt.score}/{totalPossibleMarks}</p>
-                  </div>
-                </div>
+<div style={{ ...S.card, backgroundColor: rankStyle.bg, border: `3px solid ${rankStyle.color}`, boxShadow: '0 8px 20px -4px rgba(0,0,0,0.12)' }}>
+  <div style={{ fontSize: '38px', lineHeight: 1 }}>{rankStyle.icon}</div>
+  
+  {/* এখানে র‍্যাঙ্ক এবং মোট সংখ্যা (Total) একসাথে দেখানো হয়েছে */}
+  <p style={{ fontSize: '34px', fontWeight: 900, color: '#0f172a', margin: '8px 0' }}>
+    #{rankData.rank}
+    <span style={{ fontSize: '18px', color: '#64748b', fontWeight: 700, marginLeft: '4px' }}>
+      / {rankData.total}
+    </span>
+  </p>
+  
+  <span style={{ fontSize: '11px', fontWeight: 900, color: rankStyle.color, display: 'block' }}>
+    {rankStyle.label}
+  </span>
+</div>
 
                 {/* ── EXAM ANALYSIS ── */}
                 <div style={{ marginBottom: '40px' }}>
