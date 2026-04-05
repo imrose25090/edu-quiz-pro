@@ -94,10 +94,10 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-slate-900/95 backdrop-blur-md flex items-center justify-center z-[100] p-0 md:p-4 font-['Hind_Siliguri']">
-      {/* Main Container - Mobile responsive */}
+      {/* Main Container */}
       <div className="bg-white w-full h-full md:h-[98vh] md:max-w-6xl md:rounded-2xl flex flex-col overflow-hidden shadow-2xl">
         
-        {/* Header Controls - Responsive */}
+        {/* Header Controls */}
         <div className="p-3 md:p-4 bg-white border-b flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 no-print shadow-sm shrink-0">
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <button 
@@ -136,11 +136,7 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
 
         {/* Scrollable Content Area */}
         <div className="flex-1 overflow-auto bg-slate-200 p-2 md:p-6">
-          {/* 
-            PDF Wrapper - Centers the A4 page and allows horizontal scroll on mobile
-            On mobile: overflow-x-auto allows scrolling to see full A4 page
-            On desktop: centered with margin auto
-          */}
+          {/* PDF Wrapper - Allows horizontal scroll on mobile */}
           <div className="w-full overflow-x-auto pb-4">
             <div className="min-w-full flex justify-center">
               <div 
@@ -148,7 +144,7 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
                 className="bg-white shadow-2xl"
                 style={{ 
                   width: '794px', // A4 width - fixed size
-                  minWidth: '794px', // Forces this width on mobile
+                  minWidth: '794px',
                   maxWidth: '794px',
                   margin: '0 auto',
                   padding: '50px 40px',
@@ -160,7 +156,7 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
                 {/* Header */}
                 <div style={{ textAlign: 'center', marginBottom: '40px' }}>
                   <h1 style={{ 
-                    fontSize: '48px', 
+                    fontSize: '52px', 
                     fontWeight: '1000', 
                     color: '#1e40af', 
                     margin: '0', 
@@ -177,7 +173,7 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
                     borderRadius: '10px' 
                   }}></div>
                   <p style={{ 
-                    fontSize: '16px', 
+                    fontSize: '18px', 
                     fontWeight: '900', 
                     color: '#64748b', 
                     textTransform: 'uppercase', 
@@ -187,7 +183,7 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
                   </p>
                 </div>
 
-                {/* Dashboard */}
+                {/* Dashboard - বড় সাইজ */}
                 <div style={{ 
                   display: 'grid', 
                   gridTemplateColumns: 'repeat(3, 1fr)', 
@@ -195,7 +191,7 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
                   marginBottom: '40px' 
                 }}>
                   <div style={{ 
-                    padding: '25px 15px', 
+                    padding: '30px 15px', 
                     backgroundColor: '#f0f9ff', 
                     borderRadius: '24px', 
                     textAlign: 'center', 
@@ -203,15 +199,15 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
                     WebkitPrintColorAdjust: 'exact' 
                   }}>
                     <span style={{ 
-                      fontSize: '12px', 
+                      fontSize: '14px', 
                       fontWeight: '900', 
                       color: '#0369a1', 
                       textTransform: 'uppercase',
                       display: 'block',
-                      marginBottom: '8px'
+                      marginBottom: '10px'
                     }}>Student</span>
                     <p style={{ 
-                      fontSize: '22px', 
+                      fontSize: '26px', 
                       fontWeight: '1000', 
                       color: '#0c4a6e', 
                       margin: '0',
@@ -220,7 +216,7 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
                   </div>
 
                   <div style={{ 
-                    padding: '25px 15px', 
+                    padding: '30px 15px', 
                     backgroundColor: style.bg, 
                     borderRadius: '24px', 
                     textAlign: 'center', 
@@ -228,15 +224,15 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
                     boxShadow: '0 10px 20px -5px rgba(0,0,0,0.1)', 
                     WebkitPrintColorAdjust: 'exact' 
                   }}>
-                    <div style={{ fontSize: '32px', lineHeight: '1' }}>{style.icon}</div>
+                    <div style={{ fontSize: '40px', lineHeight: '1' }}>{style.icon}</div>
                     <p style={{ 
-                      fontSize: '28px', 
+                      fontSize: '36px', 
                       fontWeight: '1000', 
                       color: '#0f172a', 
-                      margin: '5px 0' 
+                      margin: '8px 0' 
                     }}>#{rankData.rank}</p>
                     <span style={{ 
-                      fontSize: '11px', 
+                      fontSize: '13px', 
                       fontWeight: '900', 
                       color: style.color,
                       display: 'block'
@@ -244,7 +240,7 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
                   </div>
 
                   <div style={{ 
-                    padding: '25px 15px', 
+                    padding: '30px 15px', 
                     backgroundColor: '#f0fdf4', 
                     borderRadius: '24px', 
                     textAlign: 'center', 
@@ -252,15 +248,15 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
                     WebkitPrintColorAdjust: 'exact' 
                   }}>
                     <span style={{ 
-                      fontSize: '12px', 
+                      fontSize: '14px', 
                       fontWeight: '900', 
                       color: '#15803d', 
                       textTransform: 'uppercase',
                       display: 'block',
-                      marginBottom: '8px'
+                      marginBottom: '10px'
                     }}>Score</span>
                     <p style={{ 
-                      fontSize: '24px', 
+                      fontSize: '28px', 
                       fontWeight: '1000', 
                       color: '#14532d', 
                       margin: '0' 
@@ -268,18 +264,18 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
                   </div>
                 </div>
 
-                {/* Exam Analysis */}
+                {/* Exam Analysis - প্রশ্নগুলো বড় সাইজে */}
                 <div style={{ marginBottom: '40px' }}>
                   <h3 style={{ 
-                    fontSize: '26px', 
+                    fontSize: '32px', 
                     fontWeight: '1000', 
                     color: '#1e293b', 
-                    marginBottom: '25px', 
-                    borderLeft: '8px solid #2563eb', 
-                    paddingLeft: '15px' 
+                    marginBottom: '30px', 
+                    borderLeft: '10px solid #2563eb', 
+                    paddingLeft: '20px' 
                   }}>EXAM ANALYSIS</h3>
                   
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
                     {quiz.questions.map((q: any, idx: number) => {
                       const userAns = String((attempt.answers as any)?.[q.id] || '').trim();
                       const correctAns = String(q.answer || q.correctAnswer || '').trim();
@@ -291,72 +287,74 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
                         <div 
                           key={idx} 
                           style={{ 
-                            padding: '20px', 
-                            borderRadius: '20px', 
+                            padding: '28px', 
+                            borderRadius: '24px', 
                             backgroundColor: isCorrect ? '#f0fdf4' : '#fff1f2', 
-                            border: '2px solid', 
+                            border: '3px solid', 
                             borderColor: isCorrect ? '#dcfce7' : '#fecdd3', 
                             pageBreakInside: 'avoid', 
                             WebkitPrintColorAdjust: 'exact' 
                           }}
                         >
+                          {/* প্রশ্নের টেক্সট বড় করা হয়েছে */}
                           <p style={{ 
-                            fontSize: '18px', 
-                            fontWeight: '800', 
+                            fontSize: '24px', // বড় করা হয়েছে (২২px থেকে ২৪px)
+                            fontWeight: '900', 
                             color: '#1e293b', 
-                            margin: '0 0 12px 0', 
-                            lineHeight: '1.4' 
+                            margin: '0 0 18px 0', 
+                            lineHeight: '1.5' 
                           }}>
                             <span style={{ 
                               color: isCorrect ? '#16a34a' : '#e11d48', 
-                              marginRight: '8px',
-                              fontWeight: '1000'
+                              marginRight: '12px',
+                              fontWeight: '1000',
+                              fontSize: '26px'
                             }}>{idx + 1}.</span> 
                             {q.text || q.questionText}
                           </p>
                           
                           {isGapFill ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                               <div style={{ 
-                                padding: '12px 16px', 
-                                borderRadius: '10px', 
+                                padding: '18px 22px', 
+                                borderRadius: '14px', 
                                 backgroundColor: '#ffffff', 
-                                border: '3px dashed', 
+                                border: '4px dashed', 
                                 borderColor: isCorrect ? '#16a34a' : '#e11d48',
                                 color: isCorrect ? '#15803d' : '#e11d48',
-                                fontSize: '16px',
-                                fontWeight: '700'
+                                fontSize: '22px', // বড় করা হয়েছে
+                                fontWeight: '800'
                               }}>
                                 <span style={{ 
-                                  fontSize: '10px', 
+                                  fontSize: '13px', 
                                   textTransform: 'uppercase', 
                                   display: 'block', 
-                                  opacity: 0.6,
-                                  marginBottom: '4px',
-                                  fontWeight: '800'
+                                  opacity: 0.7,
+                                  marginBottom: '6px',
+                                  fontWeight: '900'
                                 }}>Your Answer:</span>
                                 {userAns || "No Answer"}
                               </div>
                               {!isCorrect && (
                                 <div style={{ 
-                                  padding: '6px 10px', 
+                                  padding: '12px 16px', 
                                   color: '#16a34a', 
-                                  fontSize: '14px', 
-                                  fontWeight: '700',
+                                  fontSize: '20px', // বড় করা হয়েছে
+                                  fontWeight: '800',
                                   backgroundColor: '#f0fdf4',
-                                  borderRadius: '6px',
-                                  border: '1px solid #86efac'
+                                  borderRadius: '10px',
+                                  border: '2px solid #86efac'
                                 }}>
                                   ✅ Correct: {correctAns}
                                 </div>
                               )}
                             </div>
                           ) : (
-                            /* Options - 2 Columns */
+                            /* Options - বড় সাইজে */
                             <div style={{ 
                               display: 'grid', 
                               gridTemplateColumns: '1fr 1fr', 
-                              gap: '10px' 
+                              gap: '14px' 
                             }}>
                               {(q.options || []).map((opt: string, oIdx: number) => {
                                 const isSelected = userAns === opt.trim();
@@ -384,24 +382,25 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
 
                                 return (
                                   <div key={oIdx} style={{ 
-                                    padding: '12px 14px', 
-                                    borderRadius: '12px', 
-                                    fontSize: '15px', 
-                                    fontWeight: '700', 
-                                    border: '2px solid', 
+                                    padding: '18px 20px', // বড় padding
+                                    borderRadius: '16px', 
+                                    fontSize: '19px', // বড় করা হয়েছে (১৭px থেকে ১৯px)
+                                    fontWeight: '800', 
+                                    border: '3px solid', 
                                     borderColor: optBorder, 
                                     backgroundColor: optBg, 
                                     color: optColor, 
                                     display: 'flex', 
                                     alignItems: 'center',
-                                    gap: '6px',
-                                    WebkitPrintColorAdjust: 'exact'
+                                    gap: '10px',
+                                    WebkitPrintColorAdjust: 'exact',
+                                    lineHeight: '1.4'
                                   }}>
                                     <span style={{ 
-                                      opacity: 0.6, 
-                                      fontSize: '12px',
-                                      fontWeight: '800',
-                                      minWidth: '18px'
+                                      opacity: 0.7, 
+                                      fontSize: '16px',
+                                      fontWeight: '900',
+                                      minWidth: '24px'
                                     }}>
                                       {String.fromCharCode(65 + oIdx)}.
                                     </span> 
@@ -417,26 +416,26 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
                   </div>
                 </div>
 
-                {/* Footer */}
+                {/* Footer - বড় সাইজে */}
                 <div style={{ 
-                  marginTop: '40px', 
-                  borderTop: '3px solid #f1f5f9', 
-                  paddingTop: '35px' 
+                  marginTop: '50px', 
+                  borderTop: '4px solid #f1f5f9', 
+                  paddingTop: '45px' 
                 }}>
-                  <div style={{ textAlign: 'center', marginBottom: '35px' }}>
+                  <div style={{ textAlign: 'center', marginBottom: '45px' }}>
                     <p style={{ 
-                      fontSize: '16px', 
-                      fontWeight: '700', 
+                      fontSize: '22px', // বড় করা হয়েছে
+                      fontWeight: '800', 
                       color: '#64748b', 
                       fontStyle: 'italic', 
-                      padding: '0 20px',
-                      lineHeight: '1.5'
+                      padding: '0 30px',
+                      lineHeight: '1.6'
                     }}>"{randomQuote.text}"</p>
                     <p style={{ 
-                      fontSize: '14px', 
+                      fontSize: '18px', 
                       fontWeight: '1000', 
                       color: '#2563eb', 
-                      marginTop: '10px' 
+                      marginTop: '15px' 
                     }}>— {randomQuote.author}</p>
                   </div>
 
@@ -449,36 +448,36 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
                     <div style={{ 
                       display: 'flex', 
                       alignItems: 'center', 
-                      gap: '10px' 
+                      gap: '12px' 
                     }}>
                       <div style={{ 
-                        width: '40px', 
-                        height: '40px', 
+                        width: '50px', 
+                        height: '50px', 
                         background: '#2563eb', 
-                        borderRadius: '10px', 
+                        borderRadius: '12px', 
                         color: '#fff', 
                         display: 'flex', 
                         alignItems: 'center', 
                         justifyContent: 'center', 
                         fontWeight: '1000', 
-                        fontSize: '20px', 
+                        fontSize: '24px', 
                         WebkitPrintColorAdjust: 'exact',
                         flexShrink: 0
                       }}>Q</div>
                       <div>
                         <p style={{ 
                           margin: 0, 
-                          fontSize: '18px', 
+                          fontSize: '24px', // বড় করা হয়েছে
                           fontWeight: '1000', 
                           color: 'black',
                           lineHeight: '1.2'
                         }}>EDUQUIZ <span style={{ color: '#2563eb' }}>PRO</span></p>
                         <p style={{ 
                           margin: 0, 
-                          fontSize: '9px', 
+                          fontSize: '12px', 
                           color: '#94a3b8', 
                           fontWeight: '900', 
-                          letterSpacing: '1px',
+                          letterSpacing: '1.5px',
                           textTransform: 'uppercase'
                         }}>SMART ASSESSMENT SYSTEM</p>
                       </div>
@@ -486,7 +485,7 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
                     <div style={{ textAlign: 'right' }}>
                       <p style={{ 
                         margin: 0, 
-                        fontSize: '10px', 
+                        fontSize: '12px', 
                         fontWeight: '1000', 
                         color: '#94a3b8',
                         textTransform: 'uppercase',
@@ -494,10 +493,10 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
                       }}>OFFICIAL VERIFIED RECORD</p>
                       <p style={{ 
                         margin: 0, 
-                        fontSize: '12px', 
+                        fontSize: '14px', 
                         fontWeight: '900', 
                         color: '#1e293b',
-                        marginTop: '4px'
+                        marginTop: '6px'
                       }}>ID: {quiz.id.slice(0, 8).toUpperCase()}</p>
                     </div>
                   </div>
