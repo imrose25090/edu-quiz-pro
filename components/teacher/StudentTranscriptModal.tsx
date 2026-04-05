@@ -244,15 +244,14 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
     const fileName = `${quiz.title.replace(/\s+/g, '_')}_${attempt.studentName.replace(/\s+/g, '_')}.pdf`;
 
     const opt = {
-      margin: [8, 8, 8, 8],
+      margin: [10, 10, 10, 10],
       filename: fileName,
       image: { type: 'jpeg', quality: 1.0 },
       html2canvas: { 
-        scale: 3,
+        scale: 4,
         useCORS: true, 
         scrollY: 0, 
-        windowWidth: 1200,
-        windowHeight: 1600,
+        windowWidth: 900,
         letterRendering: true,
         allowTaint: true,
       },
@@ -289,12 +288,19 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
         </div>
 
         {/* PDF Content Area */}
-        <div className="flex-1 overflow-auto bg-slate-200 custom-scrollbar p-2 md:p-6">
-          <div id="premium-transcript" style={{ width: '100%', minWidth: '800px', background: '#ffffff', boxSizing: 'border-box', padding: '60px 50px' }}>
+        <div className="flex-1 overflow-auto bg-slate-200 custom-scrollbar p-2 md:p-6 flex flex-col items-center">
+          <div id="premium-transcript" style={{ 
+            width: '100%', 
+            maxWidth: '900px',
+            margin: '0 auto',
+            background: '#ffffff', 
+            boxSizing: 'border-box', 
+            padding: 'clamp(20px, 4vw, 60px) clamp(16px, 4vw, 50px)' 
+          }}>
             
             {/* Header */}
             <div style={{ textAlign: 'center', marginBottom: '45px' }}>
-              <h1 style={{ fontSize: '56px', fontWeight: '1000', color: '#1e40af', margin: '0', textTransform: 'uppercase', lineHeight: '1' }}>
+              <h1 style={{ fontSize: 'clamp(28px, 5vw, 56px)', fontWeight: '1000', color: '#1e40af', margin: '0', textTransform: 'uppercase', lineHeight: '1' }}>
                 {coachingName}
               </h1>
               <div style={{ height: '6px', width: '100px', backgroundColor: '#3b82f6', margin: '20px auto', borderRadius: '10px' }}></div>
@@ -304,10 +310,10 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
             </div>
 
             {/* Dashboard */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '20px', marginBottom: '45px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '20px', marginBottom: '45px' }}>
               <div style={{ padding: '25px 15px', backgroundColor: '#f0f9ff', borderRadius: '28px', textAlign: 'center', border: '2px solid #bae6fd', WebkitPrintColorAdjust: 'exact' }}>
                 <span style={{ fontSize: '14px', fontWeight: '900', color: '#0369a1', textTransform: 'uppercase' }}>Student</span>
-                <p style={{ fontSize: '30px', fontWeight: '1000', color: '#0c4a6e', marginTop: '10px' }}>{attempt.studentName}</p>
+                <p style={{ fontSize: 'clamp(18px, 3vw, 30px)', fontWeight: '1000', color: '#0c4a6e', marginTop: '10px' }}>{attempt.studentName}</p>
               </div>
 
               <div style={{ padding: '25px 15px', backgroundColor: style.bg, borderRadius: '28px', textAlign: 'center', border: `4px solid ${style.color}`, boxShadow: '0 10px 20px -5px rgba(0,0,0,0.1)', WebkitPrintColorAdjust: 'exact' }}>
@@ -336,7 +342,7 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
 
                   return (
                     <div key={idx} style={{ padding: '30px', borderRadius: '32px', backgroundColor: isCorrect ? '#f0fdf4' : '#fff1f2', border: '2px solid', borderColor: isCorrect ? '#dcfce7' : '#fecdd3', pageBreakInside: 'avoid', WebkitPrintColorAdjust: 'exact' }}>
-                      <p style={{ fontSize: '26px', fontWeight: '900', color: '#1e293b', margin: '0 0 20px 0', lineHeight: '1.4' }}>
+                      <p style={{ fontSize: 'clamp(16px, 2.5vw, 26px)', fontWeight: '900', color: '#1e293b', margin: '0 0 20px 0', lineHeight: '1.4' }}>
                         <span style={{ color: isCorrect ? '#16a34a' : '#e11d48', marginRight: '10px' }}>{idx + 1}.</span> 
                         {q.text || q.questionText}
                       </p>
@@ -385,7 +391,7 @@ export const StudentTranscriptModal: React.FC<StudentTranscriptModalProps> = ({
                               <div key={oIdx} style={{ 
                                 padding: '18px 20px', 
                                 borderRadius: '18px', 
-                                fontSize: '22px', 
+                                fontSize: 'clamp(13px, 2vw, 22px)', 
                                 fontWeight: '800', 
                                 border: '2px solid', 
                                 borderColor: optBorder, 
