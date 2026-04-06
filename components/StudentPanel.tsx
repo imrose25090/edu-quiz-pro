@@ -22,6 +22,23 @@ const StudentPanel: React.FC<StudentPanelProps> = ({
   const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
+    // ✅ অ্যাডমিন ইমপারসোনেশন চেক (প্রথমে)
+    const isAdminImpersonating = localStorage.getItem('admin_impersonating_student') === 'true';
+    const impersonatedName = localStorage.getItem('impersonated_student_name');
+    
+    if (isAdminImpersonating && impersonatedName) {
+      // ✅ অ্যাডমিন ইমপারসোনেশন - পাসওয়ার্ড ছাড়াই লগইন
+      setIsAuth(true);
+      setStudentName(impersonatedName);
+      setAuthChecked(true);
+      
+      // ✅ ফ্ল্যাগ ক্লিয়ার করুন (শুধু একবারের জন্য)
+      localStorage.removeItem('admin_impersonating_student');
+      // impersonated_student_name রাখুন (লগআউট পর্যন্ত)
+      return;
+    }
+
+    // ✅ নর্মাল ক্যাশড লগইন চেক
     const cachedAuth = localStorage.getItem('student_auth') === 'true';
     const cachedName = (localStorage.getItem('student_name') || '').trim();
     if (!cachedAuth || !cachedName) { setAuthChecked(true); return; }
@@ -58,6 +75,22 @@ const StudentPanel: React.FC<StudentPanelProps> = ({
   // ── Auth ──────────────────────────────────────────────────
   const handleProtectedLogin = async (name: string, pass: string) => {
     try {
+      // ✅ চেক করুন অ্যাডমিন ইমপারসোনেট করছে কিনা
+      const isAdminImpersonating = localStorage.getItem('admin_impersonating_student') === 'true';
+      const impersonatedName = localStorage.getItem('impersonated_student_name');
+      
+      if (isAdminImpersonating && impersonatedName === name.trim()) {
+        // ✅ অ্যাডমিন ইমপারসোনেশন - পাসওয়ার্ড চেক স্কিপ করুন
+        setIsAuth(true);
+        setStudentName(name);
+        localStorage.setItem('student_auth', 'true');
+        localStorage.setItem('student_name', name);
+        // ✅ ফ্ল্যাগ ক্লিয়ার করুন
+        localStorage.removeItem('admin_impersonating_student');
+        return true;
+      }
+
+      // ✅ নর্মাল স্টুডেন্ট লগইন - পাসওয়ার্ড চেক করুন
       const q = query(collection(db, "students"), where("name", "==", name.trim()));
       const snap = await getDocs(q);
       if (!snap.empty && snap.docs[0].data().isFrozen) {
@@ -76,6 +109,8 @@ const StudentPanel: React.FC<StudentPanelProps> = ({
   const handleLogout = () => {
     localStorage.removeItem('student_auth');
     localStorage.removeItem('student_name');
+    // ✅ ইমপারসোনেশন ডেটাও ক্লিয়ার করুন
+    localStorage.removeItem('impersonated_student_name');
     setIsAuth(false); setStudentName('');
     onBack();
   };
