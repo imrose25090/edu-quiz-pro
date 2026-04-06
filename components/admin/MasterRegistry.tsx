@@ -309,6 +309,24 @@ const MasterRegistry: React.FC<MasterRegistryProps> = ({
   const StudentCard = ({ user, index, showRank }: { user: any; index: number; showRank: boolean }) => {
     const pts = studentStats[user.name]?.points || 0;
     const qc  = studentStats[user.name]?.quizCount || 0;
+    
+    // ✅ Login Direct হ্যান্ডলার - পাসওয়ার্ড ছাড়াই লগইন
+    const handleLoginDirect = () => {
+      // ✅ লোকাল স্টোরেজে ফ্ল্যাগ সেট করুন
+      localStorage.setItem('admin_impersonating_student', 'true');
+      localStorage.setItem('impersonated_student_name', user.name);
+      localStorage.setItem('impersonated_student_points', pts.toString());
+      localStorage.setItem('impersonated_student_quizCount', qc.toString());
+      
+      // ✅ স্টোরে ইমপারসোনেটেড ইউজার সেট করুন
+      store.setImpersonatedUser({ 
+        ...user, 
+        role: 'student',
+        isAdminImpersonating: true,
+        impersonatedAt: new Date().toISOString()
+      });
+    };
+    
     return (
       <div className={`p-5 rounded-[24px] border bg-white flex flex-col md:flex-row justify-between items-center gap-4 transition-all shadow-sm ${
         user.isFrozen ? 'border-rose-200 bg-rose-50/30' : 'border-slate-100 hover:border-emerald-300 hover:shadow-md'
@@ -337,8 +355,11 @@ const MasterRegistry: React.FC<MasterRegistryProps> = ({
           </div>
         </div>
         <div className="flex gap-2 w-full md:w-auto shrink-0">
-          <button onClick={() => store.setImpersonatedUser({ ...user, role: 'student' })}
-            className="bg-emerald-600 text-white px-4 py-2.5 rounded-xl font-black text-[10px] uppercase hover:bg-emerald-700 transition-all shadow-sm active:scale-95">
+          {/* ✅ Login Direct বাটন - handleLoginDirect ফাংশন কল করে */}
+          <button 
+            onClick={handleLoginDirect}
+            className="bg-emerald-600 text-white px-4 py-2.5 rounded-xl font-black text-[10px] uppercase hover:bg-emerald-700 transition-all shadow-sm active:scale-95"
+          >
             Login Direct
           </button>
           <button onClick={() => updateStudent?.(user.id, { isFrozen: !user.isFrozen })}
